@@ -103,8 +103,8 @@ for _, angle, dist in zip(*hough_line_peaks(h, theta, d)):
     bild_wert_liste = cropped[x0_int, y0_int]
     print(bild_wert_liste)
 
-    if bild_wert_liste > 45:
-        while bild_wert_liste >= 45:   #45 als Schwellenwert für weiss
+    if bild_wert_liste > 200:
+        while bild_wert_liste >= 200:   #200 als Schwellenwert für weiss
             y_strahl = (np.tan(angle + np.pi / 2) * x_strahl) + q_int   #eigentlich cotan, aber so ausgedrückt um 1/0 zu vermeiden
             y_strahl_int = int(y_strahl)
             bild_wert_liste = cropped[x_strahl, y_strahl_int]
