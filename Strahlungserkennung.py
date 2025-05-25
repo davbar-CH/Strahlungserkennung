@@ -102,14 +102,24 @@ for _, angle, dist in zip(*hough_line_peaks(h, theta, d)):
     q_int = int(q)
     bild_wert_liste = cropped[x0_int, y0_int]
     print(bild_wert_liste)
-
+    
     if bild_wert_liste > 200:
+        x_strahl = x0_int  # Initialize x_strahl
+        y_ende = y0_int    # Initialize y_ende with default value
+        
         while bild_wert_liste >= 200:   #200 als Schwellenwert für weiss
             y_strahl = (np.tan(angle + np.pi / 2) * x_strahl) + q_int   #eigentlich cotan, aber so ausgedrückt um 1/0 zu vermeiden
             y_strahl_int = int(y_strahl)
-            bild_wert_liste = cropped[x_strahl, y_strahl_int]
-            x_strahl = x_strahl + 1
-            y_ende = y_strahl
+            
+            # Check bounds before accessing array
+            if (x_strahl >= 0 and x_strahl < cropped.shape[0] and 
+                y_strahl_int >= 0 and y_strahl_int < cropped.shape[1]):
+                bild_wert_liste = cropped[x_strahl, y_strahl_int]
+                x_strahl = x_strahl + 1
+                y_ende = y_strahl
+            else:
+                break  # Exit loop if we go out of bounds
+                
         ax[1].plot((x_strahl, x0_int), (y_ende, y0_int))
     else:
         pass
