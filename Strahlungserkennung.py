@@ -92,13 +92,6 @@ ax[1].set_xlabel('Angles (degrees)')
 ax[1].set_ylabel('Distance (pixels)')
 ax[1].axis('image')"""
 
-
-
-strcord = []
-
-
-
-
 for _, angle, dist in zip(*hough_line_peaks(h, theta, d)):
     (x0, y0) = dist * np.array([np.cos(angle), np.sin(angle)])
     x0_int = int(x0)
@@ -133,10 +126,6 @@ ax[1].imshow(cropped, cmap=cm.gray)
 ax[1].set_ylim((cropped.shape[0], 0))
 ax[1].set_axis_off()
 ax[1].set_title('Detected lines')
-
-
-
-
 
 """width, height = cropped.shape
 #print(height, width)
