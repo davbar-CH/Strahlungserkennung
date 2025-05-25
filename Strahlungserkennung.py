@@ -25,20 +25,7 @@ image = cv2.imread(bilder[1],cv2.IMREAD_GRAYSCALE)
 rotiert = imutils.rotate(image, 51)
 
 #Bilder nacheinander anzeigen lassen
-"""for i in bilder:
-    bild = cv2.imread(i)
-    cv2.imshow(f"TEST{i}", bild)
-    cv2.waitKeyEx(1000)
-    cv2.destroyAllWindows()"""
 
-"""for x in range(-2,3):
-    for y in range(-2,3):
-        while strcor_x[j] + x and strcor_y[j] + y != strcor_x[j + 1] and strcor_y[j + 1]:
-            pass
-        else:
-        print(x)
-        for j in zip(range(strcor_x), range(strcor_y)):
-            if strcor_x[j] + 1 and strcor_y[j] + 1 = strcor_x[j+1] and strcor_y[j+1]:"""
 
 #[26 26 26] Wert für Pixel 1599 und 2399
 
