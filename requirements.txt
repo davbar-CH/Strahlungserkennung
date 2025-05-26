@@ -1,0 +1,13 @@
+# Requirements for Strahlungserkennung project
+# Image processing and computer vision
+opencv-python>=4.8.0
+numpy>=1.24.0
+scikit-image>=0.21.0
+imutils>=0.5.4
+
+# Plotting and visualization
+matplotlib>=3.7.0
+
+# Standard library modules (included with Python)
+# glob - built-in
+# os - built-in
