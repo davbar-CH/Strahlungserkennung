@@ -8,6 +8,9 @@ imutils>=0.5.4
 # Plotting and visualization
 matplotlib>=3.7.0
 
+# Configuration management (optional but recommended)
+python-dotenv>=1.0.0
+
 # Standard library modules (included with Python)
 # glob - built-in
 # os - built-in

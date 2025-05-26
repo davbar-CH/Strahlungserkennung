@@ -6,6 +6,7 @@ from skimage.transform import hough_line, hough_line_peaks
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import imutils
+from config import Config
 
 class StrahlPunkt:
     def __init__(self, xKoordinate, yKoordinate):
@@ -14,7 +15,7 @@ class StrahlPunkt:
 
 # Bilderliste und Pfad zum Ordner
 bilder = []
-folder_path = r"C:\Dokumente 2\Matura Data\Matura Data komplett\902D7200\Tests"
+folder_path = Config.IMAGE_FOLDER_PATH
 #r"C:\Dokumente 2\Matura\data"
 
 # Bild und Pfad verbinden, zur Liste hinzufügen
