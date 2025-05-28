@@ -27,38 +27,43 @@ def load_and_prepare_image(image_path, rotation_angle=51):
             raise ValueError(f"Could not load image: {image_path}")
         
 
-        #Debug your transformation matrix
+        # #Debug your transformation matrix
 
-        (h, w) = image.shape[:2]
-        center = (w // 2, h // 2)
-        M = cv2.getRotationMatrix2D(center, rotation_angle, 1.0)
+        # (h, w) = image.shape[:2]
+        # center = (w // 2, h // 2)
+        # M = cv2.getRotationMatrix2D(center, rotation_angle, 1.0)
 
-        print("Transformation matrix M:")
-        print(M)
-        print("Matrix shape:", M.shape)
-        print("Matrix values range:", M.min(), "to", M.max())
+        # print("Transformation matrix M:")
+        # print(M)
+        # print("Matrix shape:", M.shape)
+        # print("Matrix values range:", M.min(), "to", M.max())
 
-        # Check input image
-        print("Input image shape:", image.shape)
-        print("Input image dtype:", image.dtype)
-        print("Input image value range:", image.min(), "to", image.max())
-        print("Input image non-zero pixels:", np.count_nonzero(image))
+        # # Check input image
+        # print("Input image shape:", image.shape)
+        # print("Input image dtype:", image.dtype)
+        # print("Input image value range:", image.min(), "to", image.max())
+        # print("Input image non-zero pixels:", np.count_nonzero(image))
 
-        # Check output dimensions
-        print("Output dimensions:", (w, h))
-        myrotated = cv2.warpAffine(image, M, (w, h))
+        # # Check output dimensions
+        # print("Output dimensions:", (w, h))
+        # myrotated = cv2.warpAffine(image, M, (w, h))
         
-        if np.count_nonzero(myrotated) == 0:
-         print("WARNING: Result is all zeros!")
+        # if np.count_nonzero(myrotated) == 0:
+        #  print("WARNING: Result is all zeros!")
         
-        # Try with different border mode
-        rotated_reflected = cv2.warpAffine(image, M, (w, h), 
-                                         borderMode=cv2.BORDER_REFLECT)
+        # # Try with different border mode
+        # rotated_reflected = cv2.warpAffine(image, M, (w, h), 
+        #                                  borderMode=cv2.BORDER_REFLECT)
+        # # Rotate image
+
+        # rotated = imutils.rotate(image, rotation_angle)
+        # print(f"Image loaded and rotated by {rotation_angle} degrees")
+        # return rotated_reflected
+
         # Rotate image
-
-        rotated = imutils.rotate(image, rotation_angle)
-        print(f"Image loaded and rotated by {rotation_angle} degrees")
-        return rotated_reflected
+        #rotated = imutils.rotate(image, rotation_angle)
+        #print(f"Image loaded and rotated by {rotation_angle} degrees")
+        return image
     except Exception as e:
         print(f"Error processing image: {e}")
         return None
@@ -256,6 +261,7 @@ def visualize_results(original_image, cropped_image, hough_peaks, edges,
         
     except Exception as e:
         print(f"Error creating visualization: {e}")
+      
 
 def analyze_radiation_image(image_path, crop_params=None, rotation_angle=51, 
                           radiation_start=(100, 100), threshold=200, debug=True):
@@ -309,6 +315,8 @@ def analyze_radiation_image(image_path, crop_params=None, rotation_angle=51,
         
         # Crop image
         cropped = crop_image(image, **crop_params)
+        save_cropped_image(cropped, "C:\\temp\\cropped_radiation_image.jpg")
+
         if cropped is None:
             return None
         
@@ -450,6 +458,19 @@ def preprocess_image_for_lines(image):
         print(f"Error in preprocessing: {e}")
         return image, image
 
+def save_cropped_image(cropped_image, output_path):
+    """Save cropped image using OpenCV."""
+    try:
+        success = cv2.imwrite(output_path, cropped_image)
+        if success:
+            print(f"✅ Cropped image saved to: {output_path}")
+        else:
+            print(f"❌ Failed to save image to: {output_path}")
+        return success
+    except Exception as e:
+        print(f"Error saving image: {e}")
+        return False
+
 def main():
     """Main execution function."""
     try:
@@ -465,7 +486,7 @@ def main():
         # Analyze first image (you can modify this to process all images)
         results = analyze_radiation_image(
             image_files[0],
-            crop_params={'x_start': 200, 'y_start': 150, 'width': 400, 'height': 300},
+            crop_params={'x_start': 200, 'y_start': 150, 'width': 6000, 'height': 4000},
             rotation_angle=51,
             radiation_start=(100, 100),
             threshold=100
