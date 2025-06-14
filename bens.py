@@ -17,12 +17,35 @@ from matplotlib import colors
 import cv2
 
 image = cv2.imread(r"C:\temp\Testpack\DSC_0082.JPG")
+
+# Cut off borders (adjust border sizes as needed)
+border_top = 50     # pixels to cut from top
+border_bottom = 50  # pixels to cut from bottom  
+border_left = 50    # pixels to cut from left
+border_right = 50   # pixels to cut from right
+
+# Apply border cropping
+height, width = image.shape[:2]
+image = image[border_top:height-border_bottom, border_left:width-border_right]
+
+# Resize image to make it smaller (adjust scale_factor as needed)
+scale_factor = 0.5  # Resize to 50% of original size
+new_width = int(image.shape[1] * scale_factor)
+new_height = int(image.shape[0] * scale_factor)
+image = cv2.resize(image, (new_width, new_height), interpolation=cv2.INTER_AREA)
+
+# Scale the polygon points accordingly and adjust for border cropping
 punkte = np.array([
     [715, 1450],
     [3035, 188],
     [4666, 2228],
     [2379, 3989]
 ], dtype=np.int32)
+
+# Adjust points for border cropping first, then scale
+punkte[:, 0] -= border_left   # Adjust x coordinates
+punkte[:, 1] -= border_top    # Adjust y coordinates
+punkte = (punkte * scale_factor).astype(np.int32)
 
 # Debug: Print image properties
 print("[DEBUG] image dtype:", image.dtype)
