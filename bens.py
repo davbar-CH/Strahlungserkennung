@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 import cv2
 
-image = cv2.imread(f"D:\Matura Data komplett\Testpack\Testpack\DSC_0081.JPG")
+image = cv2.imread(r"D:\Matura Data komplett\Testpack\Testpack\DSC_0082.JPG")
 punkte = np.array([
     [715, 1450],
     [3035, 188],
@@ -46,7 +46,7 @@ imageArray = numpy.array(cropped)
 # --- collapse array (sum all color channels to make grayscale)
 aGrayScaleArray = numpy.sum(imageArray,axis=2).astype(numpy.int64)
 # --- find threshold to separate objects from background
-threshold = 260
+threshold = 280
 # ---- threshold array
 aBinaryArray = aGrayScaleArray>threshold
 # ---- run connectivity filter using 2D-cross structure element
@@ -55,14 +55,15 @@ aVal = ndimage.label(aBinaryArray, aStructure, output=None)
 # ---- get object count
 objectCount = len(set(aVal[0].flatten())) - 1
 
-colored_labels = colors.ListedColormap(numpy.random.rand(objectCount + 1, 3))
-bounds = numpy.arange(objectCount + 2) - 0.5
-norm = colors.BoundaryNorm(bounds, colored_labels.N)
+colored_labels = colors.ListedColormap(plt.cm.tab20.colors[:objectCount + 1])
+
 
 # Visualisierung
 fig, axes = plt.subplots(2, 2, figsize=(12, 10))
 axes = axes.ravel()
 
+Anfangspunkte = []
+Endpunkte = []
 # ---- get object dimensions
 # aVal[0] is a labeled image where each object has a separate label (incl. background)
 objectLabels = numpy.unique(aVal[0])
@@ -73,20 +74,22 @@ for xx in objectLabels[1:]:
     aP0 = numpy.min(aP_all,axis=0)
     aP1 = numpy.max(aP_all,axis=0)
     aLength = numpy.linalg.norm(aP0-aP1)
-    if 100 < aLength < 150 and numpy.count_nonzero(aObj) < 2500:
+    if (100 < aLength < 250) and (300 < numpy.count_nonzero(aObj) < 4500):
         print("object ", xx, " has ", numpy.count_nonzero(aObj), " pixels and is ", aLength, " pixels long.")
-        axes[3].imshow(aVal[0], cmap=colored_labels, norm=norm)
-        axes[3].set_title(f"Gelabelte Objekte (Anzahl: {objectCount})")
-        axes[3].axis('off')
+        Anfangspunkte.append(aP0)
+        Endpunkte.append(aP1)
+        axes[3].plot((aP0[1], aP1[1]), (aP0[0], aP1[0]), color='red', linewidth=2)
+
     else:
         pass
 
-
-
-
-
-# Erzeuge eine farbige Darstellung des gelabelten Bildes
-# Ignoriere Label 0 (Hintergrund)
+for i, punkt in enumerate(Anfangspunkte):
+    for j, vergleichspunkt in enumerate(Anfangspunkte + Endpunkte):
+        # Berechne die Differenz zwischen Punkten
+        differenz = numpy.linalg.norm(punkt - vergleichspunkt)
+        # Überprüfe, ob die Differenz höchstens 2 beträgt
+        if differenz <= 1:
+            print(f"Punkt {punkt} (Index {i}) ähnelt Punkt {vergleichspunkt} (Index {j}) mit einer Differenz von {differenz:.2f}.")
 
 
 # Originalbild
@@ -105,7 +108,11 @@ axes[2].set_title("Binärbild (nach Otsu-Threshold)")
 axes[2].axis('off')
 
 # Gelabelte Objekte
+axes[3].set_facecolor('#20423c')
+axes[3].imshow(aGrayScaleArray, cmap='gray')#hier statt alle gelabelte objetke nur die, die auch zeile 77 erfüllen
 
+axes[3].set_title(f"Gelabelte Objekte (Anzahl: {objectCount})")
+axes[3].axis('off')
 
 
 plt.tight_layout()
