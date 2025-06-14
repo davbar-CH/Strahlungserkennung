@@ -16,13 +16,19 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 import cv2
 
-image = cv2.imread(f"D:\Matura Data komplett\Testpack\Testpack\DSC_0081.JPG")
+image = cv2.imread(r"C:\temp\Testpack\DSC_0082.JPG")
 punkte = np.array([
     [715, 1450],
     [3035, 188],
     [4666, 2228],
     [2379, 3989]
 ], dtype=np.int32)
+
+# Debug: Print image properties
+print("[DEBUG] image dtype:", image.dtype)
+print("[DEBUG] image shape:", image.shape)
+print("[DEBUG] image min:", image.min())
+print("[DEBUG] image max:", image.max())
 
 punkte = punkte.reshape((-1, 1, 2))
 
@@ -43,17 +49,35 @@ cropped = masked[y:y+h, x:x+w]
 # --- get image data as numpy array (if color tiff may be a 4D RGBA array)
 imageArray = numpy.array(cropped)
 
+print("[DEBUG] cropped image dtype:", imageArray.dtype)
+print("[DEBUG] cropped image shape:", imageArray.shape)
+print("[DEBUG] cropped image min:", imageArray.min())
+print("[DEBUG] cropped image max:", imageArray.max())
+
 # --- collapse array (sum all color channels to make grayscale)
 aGrayScaleArray = numpy.sum(imageArray,axis=2).astype(numpy.int64)
+# Debug: Print grayscale stats
+print("[DEBUG] grayscale array dtype:", aGrayScaleArray.dtype)
+print("[DEBUG] grayscale array shape:", aGrayScaleArray.shape)
+print("[DEBUG] grayscale min:", aGrayScaleArray.min())
+print("[DEBUG] grayscale max:", aGrayScaleArray.max())
 # --- find threshold to separate objects from background
 threshold = 260
+# Debug: Print threshold value
+print("[DEBUG] threshold value:", threshold)
 # ---- threshold array
 aBinaryArray = aGrayScaleArray>threshold
+# Debug: Print how many pixels are above threshold
+print("[DEBUG] Number of pixels above threshold:", np.sum(aBinaryArray))
 # ---- run connectivity filter using 2D-cross structure element
 aStructure = ndimage.generate_binary_structure(2, 1)
 aVal = ndimage.label(aBinaryArray, aStructure, output=None)
+# Debug: Print unique labels found
+print("[DEBUG] Unique labels found:", np.unique(aVal[0]))
 # ---- get object count
 objectCount = len(set(aVal[0].flatten())) - 1
+
+print("[DEBUG] Object count:", objectCount)
 
 colored_labels = colors.ListedColormap(numpy.random.rand(objectCount + 1, 3))
 bounds = numpy.arange(objectCount + 2) - 0.5
@@ -67,19 +91,34 @@ axes = axes.ravel()
 # aVal[0] is a labeled image where each object has a separate label (incl. background)
 objectLabels = numpy.unique(aVal[0])
 print("object labels: ",objectLabels)
-for xx in objectLabels[1:]:
-    aObj = aVal[0] == xx
-    aP_all = numpy.argwhere(aObj)
-    aP0 = numpy.min(aP_all,axis=0)
-    aP1 = numpy.max(aP_all,axis=0)
-    aLength = numpy.linalg.norm(aP0-aP1)
-    if 100 < aLength < 150 and numpy.count_nonzero(aObj) < 2500:
-        print("object ", xx, " has ", numpy.count_nonzero(aObj), " pixels and is ", aLength, " pixels long.")
-        axes[3].imshow(aVal[0], cmap=colored_labels, norm=norm)
-        axes[3].set_title(f"Gelabelte Objekte (Anzahl: {objectCount})")
+fig.patch.set_facecolor('lightgrey')
+# Optimized object property extraction
+object_slices = ndimage.find_objects(aVal[0])
+cnt = 0
+for label in objectLabels[1:]:
+    slc = object_slices[label - 1]  # label indices start at 1
+    if slc is None:
+        continue
+    mask = (aVal[0][slc] == label)
+    pixel_count = np.count_nonzero(mask)
+    if pixel_count == 0:
+        continue
+    coords = np.argwhere(mask)
+    # Offset coordinates by slice start
+    coords += np.array([slc[0].start, slc[1].start])
+    min_pt = coords.min(axis=0)
+    max_pt = coords.max(axis=0)
+    length = np.linalg.norm(max_pt - min_pt)
+    new_colors = np.vstack([colored_labels.colors, [[0.0, 0.0, 0.0]]])  # Add black
+    new_cmap = colors.ListedColormap(new_colors)
+    new_norm = colors.BoundaryNorm(np.arange(objectCount + 3) - 0.5, new_cmap.N)
+    if 100 < length < 120 and pixel_count < 2500:
+        print(f"object {label} has {pixel_count} pixels and is {length:.2f} pixels long.")
+        axes[3].imshow(aVal[0], cmap=new_cmap, norm=new_norm)
+        axes[3].set_title(f"Gelabelte Objekte (Anzahl: {cnt+1})")
         axes[3].axis('off')
-    else:
-        pass
+        axes[3].set_facecolor('black')  # Set axes background to black
+        cnt += 1
 
 
 

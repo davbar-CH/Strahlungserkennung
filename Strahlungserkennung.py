@@ -14,7 +14,7 @@ class StrahlPunkt:
 
 # Bilderliste und Pfad zum Ordner
 bilder = []
-folder_path = r"C:\Dokumente 2\Matura Data\Matura Data komplett\902D7200\Tests"
+folder_path = r"C:\temp\Testpack"
 #r"C:\Dokumente 2\Matura\data"
 
 # Bild und Pfad verbinden, zur Liste hinzufügen
