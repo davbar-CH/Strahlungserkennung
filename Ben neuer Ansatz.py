@@ -1,0 +1,234 @@
+# ! /usr/bin/env python
+"""
+automated thresholding using otsu:
+https://scipy-lectures.org/packages/scikit-image/auto_examples/plot_threshold.html
+structure element for connectivity:
+https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.generate_binary_structure.html
+connected component filter:
+https://docs.scipy.org/doc/scipy-1.2.3/reference/generated/scipy.ndimage.label.html
+"""
+import numpy
+import numpy as np
+from scipy import ndimage
+import matplotlib.pyplot as plt
+import cv2
+from sklearn.decomposition import PCA
+import glob
+import os
+from pandas import DataFrame
+
+# hier den jeweiligen Bildpfad einfügen oder ansonsten config file
+folder_path = r"C:\Dokumente 2\Matura Data\Matura Data komplett\902D7200\Data Modus 2-2"
+
+
+def bilder_einfügen():
+    try:
+        bilder = []
+        for i in glob.glob(os.path.join(folder_path, "DSC_0368.JPG")):
+            bilder.append(i)
+        print(bilder)
+        print(f"Es wurden {len(bilder)} Bilder gefunden!")
+        return bilder
+
+    except Exception as e:
+        print(f"Fehler beim Einfügen des Bildes aus der Datei:{e}")
+
+
+bilder = bilder_einfügen()
+i = 0
+Zähler_Liste = []
+Winkel_Liste = []
+
+while i < len(bilder):
+    def bilder_einlesen():
+        try:
+            image = bilder[i]
+            image = cv2.imread(image)
+            print(f"Gerade am Bild {i} dran")
+            print("geht1")
+            return image
+
+        except Exception as e:
+            print(f"Fehler beim Einlesen des Bildes:{e}")
+
+    # noinspection PyTypeChecker
+    def croppen():
+
+        try:
+            image = bilder_einlesen()
+
+            # Skalierung des Bildes, damit das Programm schneller ist
+            skalierung = 0.5
+            new_width = int(image.shape[1] * skalierung)
+            new_height = int(image.shape[0] * skalierung)
+            image = cv2.resize(image, (new_width, new_height), interpolation=cv2.INTER_AREA)
+
+            # Punkte für Ecken des Bildes, bilden Viereck, damit der Rand der Nebelkammer weg ist.
+            # Punkte müssen ebenfalls skaliert werden
+            punkte = np.array([
+                [970, 1550],  # oben links
+                [3000, 440],  # oben rechts
+                [4400, 2187],  # unten rechts
+                [2400, 3760]  # unten links
+            ], dtype=np.int32)
+
+            punkte = (punkte * skalierung).astype(np.int32)
+            punkte = punkte.reshape((-1, 1, 2))
+
+            # Maske erzeugen, damit die Punkte das Viereck bilden,
+            # damit man das eigentliche Bild vom Hintergrund wegschneiden kann
+            maske = np.zeros(image.shape[:2], dtype=np.uint8)
+            cv2.fillPoly(maske, [punkte], 255)
+
+            # Bild maskieren und alles andere wird schwarz
+            masked = cv2.bitwise_and(image, image, mask=maske)
+
+            # Viereck berechnen
+            x, y, w, h = cv2.boundingRect(punkte)
+
+            # Nur den Bereich innerhalb des Vierecks ausschneiden
+            cropped = masked[y:y + h, x:x + w]
+
+            # --- get image data as numpy array (if color tiff may be a 4D RGBA array)
+            imageArray = numpy.array(cropped)
+            print("geht2")
+            return cropped, imageArray
+
+        except Exception as e:
+            print(f"Fehler beim Croppen:{e}")
+
+
+    def labeling():
+        try:
+            temp, imageArray = croppen()
+            # --- collapse array (sum all color channels to make grayscale)
+            aGrayScaleArray = numpy.sum(imageArray, axis=2).astype(numpy.int64)
+            # treshhold empirisch gefunden, alternativ otsu-methode, dauert aber
+            threshold = 250  # 120 für Strahlungserkennung und 300 für Winkel
+            # ---- threshold array
+            aBinaryArray = aGrayScaleArray > threshold
+            # ---- run connectivity filter using 2D-cross structure element
+            aStructure = ndimage.generate_binary_structure(2,
+                                                           2)  # hier 2,2 weil 2,1 würde Diagonale nicht erkennen
+            aVal = ndimage.label(aBinaryArray, aStructure, output=None)
+
+            print("geht3")
+            return aVal, aGrayScaleArray, aBinaryArray
+
+        except Exception as e:
+            print(f"Fehler beim Labeln der Objekte:{e}")
+
+    def winkel():
+        pass
+    def strahlungs_findung():
+        try:
+            aVal, aGrayScaleArray, aBinaryArray = labeling()
+            cropped, temp = croppen()
+            Anfangspunkte = []
+            Endpunkte = []
+            Winkel_Liste_bild = []
+            # ---- get object dimensions
+            # aVal[0] is a labeled image where each object has a separate label (incl. background)
+            objectLabels = numpy.unique(aVal[0])
+            print("geht4")
+            zähler = 0
+            for xx in objectLabels[1:]:
+                aObj = aVal[0] == xx
+                aP_all = numpy.argwhere(aObj)
+
+                if len(aP_all) > 180:  # PCA benötigt mind. 3 Punkte
+                    pca = PCA(n_components=1)
+                    pca.fit(aP_all)
+                    richtung = pca.components_[0]
+                    mittelpunkt = pca.mean_
+
+                    # Linienendpunkte (50 Pixel in beide Richtungen)
+                    start = mittelpunkt - 150 * richtung     # 50 für Visualisierung, 150 für Winkel Visualisierung
+                    ende = mittelpunkt + 150 * richtung
+
+                    winkel_rad = np.arctan2(richtung[0], richtung[1])  # dy/dx
+                    winkel_deg = np.degrees(winkel_rad)  # Umrechnung in Grad
+
+                    # print(f"Objekt {xx}: Winkel = {winkel_deg:.2f}°")
+                    Anfangspunkte.append(start)
+                    Endpunkte.append(ende)
+                    Winkel_Liste_bild.append("%.2f" % winkel_deg)
+
+                    zähler = zähler + 1
+                    print(zähler)
+            visualisierung(cropped, aGrayScaleArray, aBinaryArray, Anfangspunkte, Endpunkte, zähler)
+            return (zähler, Winkel_Liste_bild)
+
+        except Exception as e:
+            print(f"Fehler im Hauptprogramm:{e}")
+
+    # eigentlich nur fürs Debuggen
+    def visualisierung(cropped, aGrayScaleArray, aBinaryArray, Anfangspunkte, Endpunkte, zähler):
+
+        try:
+            fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+            axes = axes.ravel()
+
+            # Originalbild
+            axes[0].imshow(cropped)
+            axes[0].set_title("Originalbild")
+            axes[0].axis("off")
+
+            # Graubild
+            axes[1].imshow(aGrayScaleArray, cmap="gray")
+            axes[1].set_title("Graustufenbild")
+            axes[1].axis("off")
+
+            # Binärbild
+            axes[2].imshow(aBinaryArray, cmap="gray")
+            axes[2].set_title("Binärbild (nach Threshold)")
+            axes[2].axis("off")
+
+            # Gelabelte Objekte
+            for start, ende in zip(Anfangspunkte, Endpunkte):
+                axes[3].set_facecolor("#20423c")
+                axes[3].imshow(aGrayScaleArray,
+                               cmap="gray")
+                axes[3].set_title(f"Gelabelte Objekte (Anzahl: {zähler})")
+                axes[3].axis("off")
+                axes[3].plot([start[1], ende[1]], [start[0], ende[0]], "r-", linewidth=2)
+
+            plt.tight_layout()
+            plt.show()
+
+        except Exception as e:
+            print(f"Fehler bei der Visualisierung:{e}")
+
+
+    # image = cv2.imread(
+    # r"C:\Dokumente 2\Matura Data\Matura Data komplett\902D7200\Data Modus 2\DSC_0057.JPG")
+    # ab 57 weil dann der Zerfall beginnt
+
+    # for i, punkt in enumerate(Anfangspunkte):
+    # for j, vergleichspunkt in enumerate(Endpunkte):
+    # differenz = numpy.linalg.norm(punkt - vergleichspunkt)
+    # if differenz <= 5:
+    # print(
+    # f"Punkt {punkt} (Index {i}) ähnelt Punkt {vergleichspunkt} (Index {j})
+    # mit einer Differenz von {differenz:.2f}.")
+    # axes[3].plot(punkt[1], punkt[0], "go")"""
+
+    zähler, Winkel_Liste_bild = strahlungs_findung()
+    Zähler_Liste.append(zähler)
+    Winkel_Liste.extend(Winkel_Liste_bild)
+    i = i + 1
+
+while len(Winkel_Liste) < len(Zähler_Liste):
+    Winkel_Liste.append("0")
+
+while len(Winkel_Liste) > len(Zähler_Liste):
+    Zähler_Liste.append("0")
+
+
+def final():
+    dataframe = DataFrame({"Anzahl Strahlen": Zähler_Liste})
+    dataframe.to_excel("Resultate3.xlsx", sheet_name="Anzahl", index=False)
+    print("fertig")
+
+final()
+
