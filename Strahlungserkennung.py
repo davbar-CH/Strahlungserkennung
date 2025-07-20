@@ -222,7 +222,7 @@ def visualize_results(original_image, cropped_image, hough_peaks, edges,
     try:
         fig, axes = plt.subplots(2, 2, figsize=(15, 12))
         
-        # Original rotated image
+        """# Original rotated image
         axes[0, 0].imshow(original_image, cmap='gray')
         axes[0, 0].set_title('Original Rotated Image')
         axes[0, 0].axis('off')
@@ -239,17 +239,17 @@ def visualize_results(original_image, cropped_image, hough_peaks, edges,
         # Edge detection result
         axes[1, 0].imshow(edges, cmap='gray')
         axes[1, 0].set_title('Edge Detection (Canny)')
-        axes[1, 0].axis('off')
+        axes[1, 0].axis('off')"""
         
         # Hough lines on cropped image
-        axes[1, 1].imshow(cropped_image, cmap='gray')
+        axes[1].imshow(cropped_image, cmap='gray')
         if hough_peaks is not None:
             for angle, dist in zip(hough_peaks[1], hough_peaks[2]):
                 y0_line = (dist - 0 * np.cos(angle)) / np.sin(angle)
                 y1_line = (dist - cropped_image.shape[1] * np.cos(angle)) / np.sin(angle)
-                axes[1, 1].plot([0, cropped_image.shape[1]], [y0_line, y1_line], 'r-', alpha=0.7)
-        axes[1, 1].set_title('Detected Lines (Hough Transform)')
-        axes[1, 1].axis('off')
+                axes[1].plot([0, cropped_image.shape[1]], [y0_line, y1_line], 'r-', alpha=0.7)
+        axes[1].set_title('Detected Lines (Hough Transform)')
+        axes[1].axis('off')
         
         plt.tight_layout()
         
