@@ -24,7 +24,7 @@ folder_path = r"C:\Dokumente 2\Matura Data\Matura Data komplett\902D7200\Data Mo
 def bilder_einfügen():
     try:
         bilder = []
-        for i in glob.glob(os.path.join(folder_path, "DSC_0368.JPG")):
+        for i in glob.glob(os.path.join(folder_path, "DSC_0367.JPG")):
             bilder.append(i)
         print(bilder)
         print(f"Es wurden {len(bilder)} Bilder gefunden!")
@@ -53,7 +53,6 @@ while i < len(bilder):
 
     # noinspection PyTypeChecker
     def croppen():
-
         try:
             image = bilder_einlesen()
 
@@ -104,7 +103,7 @@ while i < len(bilder):
             # --- collapse array (sum all color channels to make grayscale)
             aGrayScaleArray = numpy.sum(imageArray, axis=2).astype(numpy.int64)
             # treshhold empirisch gefunden, alternativ otsu-methode, dauert aber
-            threshold = 250  # 120 für Strahlungserkennung und 300 für Winkel
+            threshold = 220  # 120 für Strahlungserkennung und 300 für Winkel
             # ---- threshold array
             aBinaryArray = aGrayScaleArray > threshold
             # ---- run connectivity filter using 2D-cross structure element
@@ -118,6 +117,7 @@ while i < len(bilder):
         except Exception as e:
             print(f"Fehler beim Labeln der Objekte:{e}")
 
+# für Winkel ein "ruhigeres" Bild nehmen
     def winkel():
         pass
     def strahlungs_findung():
@@ -136,28 +136,24 @@ while i < len(bilder):
                 aObj = aVal[0] == xx
                 aP_all = numpy.argwhere(aObj)
 
-                if len(aP_all) > 180:  # PCA benötigt mind. 3 Punkte
+                if len(aP_all) > 150:  # PCA benötigt mind. 3 Punkte
                     pca = PCA(n_components=1)
                     pca.fit(aP_all)
                     richtung = pca.components_[0]
                     mittelpunkt = pca.mean_
 
-                    # Linienendpunkte (50 Pixel in beide Richtungen)
-                    start = mittelpunkt - 150 * richtung     # 50 für Visualisierung, 150 für Winkel Visualisierung
-                    ende = mittelpunkt + 150 * richtung
-
-                    winkel_rad = np.arctan2(richtung[0], richtung[1])  # dy/dx
-                    winkel_deg = np.degrees(winkel_rad)  # Umrechnung in Grad
+                    start = mittelpunkt - 50 * richtung     # 50 für Visualisierung, 150 für Winkel Visualisierung
+                    ende = mittelpunkt + 50 * richtung
 
                     # print(f"Objekt {xx}: Winkel = {winkel_deg:.2f}°")
                     Anfangspunkte.append(start)
                     Endpunkte.append(ende)
-                    Winkel_Liste_bild.append("%.2f" % winkel_deg)
+
 
                     zähler = zähler + 1
                     print(zähler)
             visualisierung(cropped, aGrayScaleArray, aBinaryArray, Anfangspunkte, Endpunkte, zähler)
-            return (zähler, Winkel_Liste_bild)
+            return zähler
 
         except Exception as e:
             print(f"Fehler im Hauptprogramm:{e}")
@@ -199,23 +195,8 @@ while i < len(bilder):
         except Exception as e:
             print(f"Fehler bei der Visualisierung:{e}")
 
-
-    # image = cv2.imread(
-    # r"C:\Dokumente 2\Matura Data\Matura Data komplett\902D7200\Data Modus 2\DSC_0057.JPG")
-    # ab 57 weil dann der Zerfall beginnt
-
-    # for i, punkt in enumerate(Anfangspunkte):
-    # for j, vergleichspunkt in enumerate(Endpunkte):
-    # differenz = numpy.linalg.norm(punkt - vergleichspunkt)
-    # if differenz <= 5:
-    # print(
-    # f"Punkt {punkt} (Index {i}) ähnelt Punkt {vergleichspunkt} (Index {j})
-    # mit einer Differenz von {differenz:.2f}.")
-    # axes[3].plot(punkt[1], punkt[0], "go")"""
-
-    zähler, Winkel_Liste_bild = strahlungs_findung()
+    zähler = strahlungs_findung()
     Zähler_Liste.append(zähler)
-    Winkel_Liste.extend(Winkel_Liste_bild)
     i = i + 1
 
 while len(Winkel_Liste) < len(Zähler_Liste):
