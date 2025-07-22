@@ -7,6 +7,7 @@ https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.generate_bina
 connected component filter:
 https://docs.scipy.org/doc/scipy-1.2.3/reference/generated/scipy.ndimage.label.html
 """
+import shapely
 import numpy
 import numpy as np
 from scipy import ndimage
@@ -128,26 +129,30 @@ while i < len(bilder):
                 betrag = np.sqrt((punkt1[0] - punkt2[0]) ** 2 + (punkt1[1] - punkt2[1]) ** 2)
                 return betrag
 
+
+            def winkel_berechnung(vektor1, vektor2):
+                betrag_vektor1 = betrag(vektor1[0], vektor1[1])
+                betrag_vektor2 = betrag(vektor2[0], vektor2[1])
+                winkel = np.arccos((np.dot(vektor1, vektor2)) / (betrag_vektor1 * betrag_vektor2))
+                return winkel
+
+
+            def schnittpunkte():
+
             for start, ende in zip(Anfangspunkte, Endpunkte):
                 ref_punkt_start = start
                 ref_punkt_ende = ende
+
                 for verg_start, verg_ende in zip(Anfangspunkte[1:], Endpunkte[1:]):
-                    dist_refs_start = betrag(ref_punkt_start, verg_start)
-                    dist_refe_start = betrag(ref_punkt_ende, verg_start)
-                    dist_refs_ende = betrag(ref_punkt_start, verg_ende)
-                    dist_refe_ende = betrag(ref_punkt_ende, verg_ende)
+                    vektor_refs_refe = ((ref_punkt_ende[0] - ref_punkt_start[0]), ref_punkt_ende[1] - ref_punkt_start[1])
+                    vektor_vergs_verge = ((verg_ende[0] - verg_start[0]), (verg_ende[1] - verg_start[1]))
+                    distanz = shapely.distance(vektor_refs_refe, vektor_vergs_verge)
 
-                    if dist_refs_start < 10:
-                        vektor_refs_refe = ((ref_punkt_ende[0] - ref_punkt_start[0]), ref_punkt_ende[1] - ref_punkt_start[1])
-                        vektor_vergs_verge = ((verg_ende[0] - verg_start[0]), (verg_ende[1] - verg_start[1]))
-                        winkel = np.arccos((np.dot(vektor_refs_refe, vektor_vergs_verge)) / (betrag(vektor_refs_refe[0], vektor_refs_refe[1])) * (betrag(vektor_vergs_verge[0], vektor_vergs_verge[1])))
-                        return winkel
-                    if dist_refe_start < 10:
+                    if distanz < 10:
+                        winkel = winkel_berechnung(vektor_refs_refe, vektor_vergs_verge)
+                        sichere_winkel.append(winkel)
 
-                    if dist_refs_ende < 10:
-
-                    if dist_refe_ende < 10:
-
+            return sichere_winkel, mögliche_winkel
 
         except Exception as e:
             print(f"Fehler bei der Winkelberechnung:{e}")
@@ -245,4 +250,4 @@ def final():
     print("fertig")
 
 
-final()
+#final()
