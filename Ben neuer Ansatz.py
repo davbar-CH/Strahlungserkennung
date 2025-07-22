@@ -51,6 +51,7 @@ while i < len(bilder):
         except Exception as e:
             print(f"Fehler beim Einlesen des Bildes:{e}")
 
+
     # noinspection PyTypeChecker
     def croppen():
         try:
@@ -117,16 +118,47 @@ while i < len(bilder):
         except Exception as e:
             print(f"Fehler beim Labeln der Objekte:{e}")
 
-# für Winkel ein "ruhigeres" Bild nehmen
-    def winkel():
-        pass
+
+    # für Winkel ein "ruhigeres" Bild nehmen
+    def winkel(Anfangspunkte, Endpunkte):
+        try:
+            sichere_winkel = []
+            mögliche_winkel = []
+            def betrag(punkt1, punkt2):
+                betrag = np.sqrt((punkt1[0] - punkt2[0]) ** 2 + (punkt1[1] - punkt2[1]) ** 2)
+                return betrag
+
+            for start, ende in zip(Anfangspunkte, Endpunkte):
+                ref_punkt_start = start
+                ref_punkt_ende = ende
+                for verg_start, verg_ende in zip(Anfangspunkte[1:], Endpunkte[1:]):
+                    dist_refs_start = betrag(ref_punkt_start, verg_start)
+                    dist_refe_start = betrag(ref_punkt_ende, verg_start)
+                    dist_refs_ende = betrag(ref_punkt_start, verg_ende)
+                    dist_refe_ende = betrag(ref_punkt_ende, verg_ende)
+
+                    if dist_refs_start < 10:
+                        vektor_refs_refe = ((ref_punkt_ende[0] - ref_punkt_start[0]), ref_punkt_ende[1] - ref_punkt_start[1])
+                        vektor_vergs_verge = ((verg_ende[0] - verg_start[0]), (verg_ende[1] - verg_start[1]))
+                        winkel = np.arccos((np.dot(vektor_refs_refe, vektor_vergs_verge)) / (betrag(vektor_refs_refe[0], vektor_refs_refe[1])) * (betrag(vektor_vergs_verge[0], vektor_vergs_verge[1])))
+                        return winkel
+                    if dist_refe_start < 10:
+
+                    if dist_refs_ende < 10:
+
+                    if dist_refe_ende < 10:
+
+
+        except Exception as e:
+            print(f"Fehler bei der Winkelberechnung:{e}")
+
+
     def strahlungs_findung():
         try:
             aVal, aGrayScaleArray, aBinaryArray = labeling()
             cropped, temp = croppen()
             Anfangspunkte = []
             Endpunkte = []
-            Winkel_Liste_bild = []
             # ---- get object dimensions
             # aVal[0] is a labeled image where each object has a separate label (incl. background)
             objectLabels = numpy.unique(aVal[0])
@@ -136,27 +168,27 @@ while i < len(bilder):
                 aObj = aVal[0] == xx
                 aP_all = numpy.argwhere(aObj)
 
-                if len(aP_all) > 150:  # PCA benötigt mind. 3 Punkte
+                if len(aP_all) > 170:  # PCA benötigt mind. 3 Punkte
                     pca = PCA(n_components=1)
                     pca.fit(aP_all)
                     richtung = pca.components_[0]
                     mittelpunkt = pca.mean_
 
-                    start = mittelpunkt - 50 * richtung     # 50 für Visualisierung, 150 für Winkel Visualisierung
+                    start = mittelpunkt - 50 * richtung  # 50 für Visualisierung, 150 für Winkel Visualisierung
                     ende = mittelpunkt + 50 * richtung
 
-                    # print(f"Objekt {xx}: Winkel = {winkel_deg:.2f}°")
                     Anfangspunkte.append(start)
                     Endpunkte.append(ende)
 
-
                     zähler = zähler + 1
                     print(zähler)
+            winkel(Anfangspunkte, Endpunkte)
             visualisierung(cropped, aGrayScaleArray, aBinaryArray, Anfangspunkte, Endpunkte, zähler)
             return zähler
 
         except Exception as e:
             print(f"Fehler im Hauptprogramm:{e}")
+
 
     # eigentlich nur fürs Debuggen
     def visualisierung(cropped, aGrayScaleArray, aBinaryArray, Anfangspunkte, Endpunkte, zähler):
@@ -195,6 +227,7 @@ while i < len(bilder):
         except Exception as e:
             print(f"Fehler bei der Visualisierung:{e}")
 
+
     zähler = strahlungs_findung()
     Zähler_Liste.append(zähler)
     i = i + 1
@@ -211,5 +244,5 @@ def final():
     dataframe.to_excel("Resultate3.xlsx", sheet_name="Anzahl", index=False)
     print("fertig")
 
-final()
 
+final()
