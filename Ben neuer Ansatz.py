@@ -126,31 +126,57 @@ while i < len(bilder):
             sichere_winkel = []
             mögliche_winkel = []
             def betrag(punkt1, punkt2):
-                betrag = np.sqrt((punkt1[0] - punkt2[0]) ** 2 + (punkt1[1] - punkt2[1]) ** 2)
-                return betrag
+                try:
+                    betrag = np.sqrt((punkt1[0] - punkt2[0]) ** 2 + (punkt1[1] - punkt2[1]) ** 2)
+                    return betrag
+
+                except Exception as e:
+                    print(f"Fehler beim Berechnen des Betrages:{e}")
 
 
             def winkel_berechnung(vektor1, vektor2):
-                betrag_vektor1 = betrag(vektor1[0], vektor1[1])
-                betrag_vektor2 = betrag(vektor2[0], vektor2[1])
-                winkel = np.arccos((np.dot(vektor1, vektor2)) / (betrag_vektor1 * betrag_vektor2))
-                return winkel
+                try:
+                    betrag_vektor1 = betrag(vektor1[0], vektor1[1])
+                    betrag_vektor2 = betrag(vektor2[0], vektor2[1])
+                    winkel = np.arccos((np.dot(vektor1, vektor2)) / (betrag_vektor1 * betrag_vektor2))
+                    return winkel
+
+                except Exception as e:
+                    print(f"Fehler bei der Winkelberechnung:{e}")
 
 
-            def schnittpunkte():
+            def schnittpunkte(schneidende_vektoren, vektor_start_ende, vektor_vergs_verge):
+                try:
+                    anzahl_schnitte = schneidende_vektoren.count(True)
+                    if anzahl_schnitte == 1:
+                        winkel = winkel_berechnung(vektor_start_ende, vektor_vergs_verge)
+                        sichere_winkel.append(winkel)
 
+                    if anzahl_schnitte < 1:
+                        for vektor_verg in schneidende_vektoren:
+                            winkel = winkel_berechnung(vektor_start_ende, vektor_verg)
+                            print(f"Winkel zwischen zwei Strahlen:{winkel}")
+
+                    else:
+                        print("Ist ein einzelner Strahl oder Buffer zu klein")
+
+                except Exception as e:
+                    print(f"Fehler bei der Schnittpunkt-Berechnung:{e}")
+
+            schneidende_vektoren = []
             for start, ende in zip(Anfangspunkte, Endpunkte):
-                ref_punkt_start = start
-                ref_punkt_ende = ende
+                vektor_start_ende = ((ende[0] - start[0]), (ende[1] - start[1]))
+                schneidende_vektoren.append(vektor_start_ende)
 
                 for verg_start, verg_ende in zip(Anfangspunkte[1:], Endpunkte[1:]):
-                    vektor_refs_refe = ((ref_punkt_ende[0] - ref_punkt_start[0]), ref_punkt_ende[1] - ref_punkt_start[1])
                     vektor_vergs_verge = ((verg_ende[0] - verg_start[0]), (verg_ende[1] - verg_start[1]))
-                    distanz = shapely.distance(vektor_refs_refe, vektor_vergs_verge)
+                    buffer_vektorSE = shapely.buffer(vektor_start_ende, 10)
+                    buffer_vektorVsVe = shapely.buffer(vektor_vergs_verge, 10)
 
-                    if distanz < 10:
-                        winkel = winkel_berechnung(vektor_refs_refe, vektor_vergs_verge)
-                        sichere_winkel.append(winkel)
+                    if shapely.intersects(buffer_vektorSE, buffer_vektorVsVe):
+                        schneidende_vektoren.append(vektor_vergs_verge)
+
+                schnittpunkte(schneidende_vektoren, vektor_start_ende, vektor_vergs_verge)
 
             return sichere_winkel, mögliche_winkel
 
