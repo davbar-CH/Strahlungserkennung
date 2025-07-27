@@ -125,37 +125,34 @@ while i < len(bilder):
         try:
             sichere_winkel = []
             mögliche_winkel = []
-            def betrag(punkt1, punkt2):
-                try:
-                    betrag = np.sqrt((punkt1[0] - punkt2[0]) ** 2 + (punkt1[1] - punkt2[1]) ** 2)
-                    return betrag
-
-                except Exception as e:
-                    print(f"Fehler beim Berechnen des Betrages:{e}")
-
 
             def winkel_berechnung(vektor1, vektor2):
                 try:
-                    betrag_vektor1 = betrag(vektor1[0], vektor1[1])
-                    betrag_vektor2 = betrag(vektor2[0], vektor2[1])
-                    winkel = np.arccos((np.dot(vektor1, vektor2)) / (betrag_vektor1 * betrag_vektor2))
-                    return winkel
+                    betrag_vektor1 = np.sqrt(vektor1[0]**2 + vektor1[1]**2)
+                    betrag_vektor2 = np.sqrt(vektor2[0]**2 + vektor2[1]**2)
+                    winkel_rad = np.arccos((np.dot(vektor1, vektor2)) / (betrag_vektor1 * betrag_vektor2))
+                    winkel_deg = np.rad2deg(winkel_rad)
+                    return winkel_deg
 
                 except Exception as e:
                     print(f"Fehler bei der Winkelberechnung:{e}")
 
 
-            def schnittpunkte(schneidende_vektoren, vektor_start_ende, vektor_vergs_verge):
+            def schnittpunkte(schneidende_vektoren, vektor_start_ende):
                 try:
-                    anzahl_schnitte = schneidende_vektoren.count(True)
-                    if anzahl_schnitte == 1:
-                        winkel = winkel_berechnung(vektor_start_ende, vektor_vergs_verge)
-                        sichere_winkel.append(winkel)
+                    n_schnitte = len(schneidende_vektoren)
+                    if n_schnitte == 1:
+                        winkel_deg = winkel_berechnung(vektor_start_ende, schneidende_vektoren[0])
+                        sichere_winkel.append(winkel_deg)
 
-                    if anzahl_schnitte < 1:
+                    if n_schnitte > 1:     # nicht die beste Lösung, aber mir fällt nichts Besseres ein ...
                         for vektor_verg in schneidende_vektoren:
-                            winkel = winkel_berechnung(vektor_start_ende, vektor_verg)
-                            print(f"Winkel zwischen zwei Strahlen:{winkel}")
+                            winkel_deg = winkel_berechnung(vektor_start_ende, vektor_verg)
+                            print(f"Winkel zwischen zwei Strahlen:{winkel_deg}")
+                            if winkel_deg > 10:
+                                mögliche_winkel.append(winkel_deg)
+                            else:
+                                print("Wahrscheinlich ein falscher Winkel")
 
                     else:
                         print("Ist ein einzelner Strahl oder Buffer zu klein")
@@ -164,19 +161,20 @@ while i < len(bilder):
                     print(f"Fehler bei der Schnittpunkt-Berechnung:{e}")
 
             schneidende_vektoren = []
-            for start, ende in zip(Anfangspunkte, Endpunkte):
-                vektor_start_ende = ((ende[0] - start[0]), (ende[1] - start[1]))
-                schneidende_vektoren.append(vektor_start_ende)
+            for i in range(len(Anfangspunkte)):
+                vektor_start_ende = shapely.LineString([(Endpunkte[i][0] - Anfangspunkte[i][0]),
+                                                        (Endpunkte[i][1] - Anfangspunkte[i][1])])
 
-                for verg_start, verg_ende in zip(Anfangspunkte[1:], Endpunkte[1:]):
-                    vektor_vergs_verge = ((verg_ende[0] - verg_start[0]), (verg_ende[1] - verg_start[1]))
+                for j in range(i+1, len(Anfangspunkte)):
+                    vektor_vergs_verge = shapely.LineString([(Endpunkte[j][0] - Anfangspunkte[j][0]),
+                                                             (Endpunkte[j][1] - Anfangspunkte[j][1])])
                     buffer_vektorSE = shapely.buffer(vektor_start_ende, 10)
                     buffer_vektorVsVe = shapely.buffer(vektor_vergs_verge, 10)
 
-                    if shapely.intersects(buffer_vektorSE, buffer_vektorVsVe):
+                    if buffer_vektorSE.intersects(buffer_vektorVsVe):
                         schneidende_vektoren.append(vektor_vergs_verge)
 
-                schnittpunkte(schneidende_vektoren, vektor_start_ende, vektor_vergs_verge)
+                schnittpunkte(schneidende_vektoren, vektor_start_ende)
 
             return sichere_winkel, mögliche_winkel
 
@@ -205,7 +203,7 @@ while i < len(bilder):
                     richtung = pca.components_[0]
                     mittelpunkt = pca.mean_
 
-                    start = mittelpunkt - 50 * richtung  # 50 für Visualisierung, 150 für Winkel Visualisierung
+                    start = mittelpunkt - 50 * richtung
                     ende = mittelpunkt + 50 * richtung
 
                     Anfangspunkte.append(start)
@@ -213,9 +211,9 @@ while i < len(bilder):
 
                     zähler = zähler + 1
                     print(zähler)
-            winkel(Anfangspunkte, Endpunkte)
+            sichere_winkel, mögliche_winkel = winkel(Anfangspunkte, Endpunkte)
             visualisierung(cropped, aGrayScaleArray, aBinaryArray, Anfangspunkte, Endpunkte, zähler)
-            return zähler
+            return zähler, sichere_winkel, mögliche_winkel
 
         except Exception as e:
             print(f"Fehler im Hauptprogramm:{e}")
@@ -259,7 +257,7 @@ while i < len(bilder):
             print(f"Fehler bei der Visualisierung:{e}")
 
 
-    zähler = strahlungs_findung()
+    zähler, sichere_winkel, mögliche_winkel = strahlungs_findung()
     Zähler_Liste.append(zähler)
     i = i + 1
 
