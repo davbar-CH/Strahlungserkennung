@@ -122,12 +122,12 @@ while i < len(bilder):
 
 
     # für Winkel ein "ruhigeres" Bild nehmen
-    def winkel(Anfangspunkte, Endpunkte):
+    def winkel_funk(Anfangspunkte, Endpunkte):
         try:
             def winkel_berechnung(vektor1, vektor2):
                 try:
-                    betrag_vektor1 = np.sqrt(vektor1[0]**2 + vektor1[1]**2)
-                    betrag_vektor2 = np.sqrt(vektor2[0]**2 + vektor2[1]**2)
+                    betrag_vektor1 = np.sqrt(vektor1[0] ** 2 + vektor1[1] ** 2)
+                    betrag_vektor2 = np.sqrt(vektor2[0] ** 2 + vektor2[1] ** 2)
                     winkel_rad = np.arccos((np.dot(vektor1, vektor2)) / (betrag_vektor1 * betrag_vektor2))
                     winkel_deg = np.rad2deg(winkel_rad)
                     return winkel_deg
@@ -135,19 +135,19 @@ while i < len(bilder):
                 except Exception as e:
                     print(f"Fehler bei der Winkelberechnung:{e}")
 
-            def schnittpunkt(schneidende_vektoren, vektor_start_ende, Anfangspunkte, Endpunkte):
+            def schnittpunkt_funk(schneidende_vektoren, Anfangspunkte, Endpunkte):
                 schneidende_vektoren = np.array(schneidende_vektoren)
-                vektor_start_ende = np.array(vektor_start_ende)
                 Anfangspunkte = np.array(Anfangspunkte)
                 Endpunkte = np.array(Endpunkte)
 
                 k = Symbol("k")
                 l = Symbol("l")
 
-                richtungsvektor1 = k * (vektor_start_ende)
 
-                for vektor2 in schneidende_vektoren:
+                for vektor2, vektor1 in schneidende_vektoren:
+                    richtungsvektor1 = k*(vektor1)
                     richtungsvektor2 = l * (vektor2)
+
                     gleichung_links = np.array([
                         [richtungsvektor1[0] - richtungsvektor2[0]],
                         [richtungsvektor1[1] - richtungsvektor2[1]]
@@ -165,54 +165,61 @@ while i < len(bilder):
                     except np.linalg.LinAlgError:
                         continue
 
-            def schnittwinkel(schneidende_vektoren, vektor_start_ende):
+            def schnittwinkel(schneidende_vektoren):
                 try:
+                    alle_winkel = []
                     sichere_winkel = []
                     mögliche_winkel = []
                     n_schnitte = len(schneidende_vektoren)
 
                     if n_schnitte == 1:
-                        winkel_deg = winkel_berechnung(vektor_start_ende, schneidende_vektoren[0])
-                        schnittpunkt(schneidende_vektoren, vektor_start_ende, Anfangspunkte, Endpunkte)
+                        winkel_deg = winkel_berechnung(schneidende_vektoren[0][0], schneidende_vektoren[0][1])
                         sichere_winkel.append(winkel_deg)
+                        alle_winkel.append(winkel_deg)
 
-                    if n_schnitte > 1:     # nicht die beste Lösung, aber mir fällt nichts Besseres ein ...
-                        for vektor_verg in schneidende_vektoren:
+                    if n_schnitte > 1:  # nicht die beste Lösung, aber mir fällt nichts Besseres ein ...
+                        for vektor_verg, vektor_start_ende in schneidende_vektoren:
                             winkel_deg = winkel_berechnung(vektor_start_ende, vektor_verg)
                             print(f"Winkel zwischen zwei Strahlen:{winkel_deg}")
                             if winkel_deg > 10:
                                 mögliche_winkel.append(winkel_deg)
+                                alle_winkel.append(winkel_deg)
                             else:
                                 print("Wahrscheinlich ein falscher Winkel")
 
                     else:
                         print("Ist ein einzelner Strahl oder Buffer zu klein")
 
-                    return sichere_winkel, mögliche_winkel
+                    return sichere_winkel, mögliche_winkel, alle_winkel
 
                 except Exception as e:
                     print(f"Fehler bei der Winkel-Berechnung:{e}")
+
             try:
                 schneidende_vektoren = []
+                schnittpunkt_liste = []
                 for i in range(len(Anfangspunkte)):
                     vektor_start_ende = shapely.LineString([(Endpunkte[i][0] - Anfangspunkte[i][0]),
                                                             (Endpunkte[i][1] - Anfangspunkte[i][1])])
 
-                    for j in range(i+1, len(Anfangspunkte)):
+                    for j in range(i + 1, len(Anfangspunkte)):
                         vektor_vergs_verge = shapely.LineString([(Endpunkte[j][0] - Anfangspunkte[j][0]),
                                                                  (Endpunkte[j][1] - Anfangspunkte[j][1])])
                         buffer_vektorSE = shapely.buffer(vektor_start_ende, 10)
                         buffer_vektorVsVe = shapely.buffer(vektor_vergs_verge, 10)
 
                         if buffer_vektorSE.intersects(buffer_vektorVsVe):
-                            schneidende_vektoren.append(vektor_vergs_verge)
-                            schnittpunkt = schnittpunkt(schneidende_vektoren, vektor_start_ende, Anfangspunkte[i], Endpunkte[j])
-                            sichere_winkel, mögliche_winkel = schnittwinkel(schneidende_vektoren, vektor_start_ende)
+                            schneidende_vektoren.append((vektor_vergs_verge, vektor_start_ende))
+                            schnittpunkt = schnittpunkt_funk(schneidende_vektoren, Anfangspunkte[i], Endpunkte[j])
+
+                            schnittpunkt_liste.append(schnittpunkt)
+                            sichere_winkel, mögliche_winkel, alle_winkel = schnittwinkel(schneidende_vektoren)
+
+                return sichere_winkel, mögliche_winkel, alle_winkel, schnittpunkt_liste, schneidende_vektoren
 
             except Exception as e:
                 print(f"Fehler beim Buffer-bilden:{e}")
 
-            return sichere_winkel, mögliche_winkel
 
         except Exception as e:
             print(f"Fehler bei den Winkeln:{e}")
@@ -247,8 +254,11 @@ while i < len(bilder):
 
                     zähler = zähler + 1
                     print(zähler)
-            sichere_winkel, mögliche_winkel = winkel(Anfangspunkte, Endpunkte)
-            visualisierung(cropped, aGrayScaleArray, aBinaryArray, Anfangspunkte, Endpunkte, zähler)
+
+            sichere_winkel, mögliche_winkel, alle_winkel, schnittpunkt_liste, schneidende_vektoren = winkel_funk(Anfangspunkte, Endpunkte)
+            visualisierung(cropped, aGrayScaleArray, aBinaryArray,
+                           Anfangspunkte, Endpunkte, zähler,
+                           alle_winkel, schnittpunkt_liste, schneidende_vektoren)
             return zähler, sichere_winkel, mögliche_winkel
 
         except Exception as e:
@@ -256,7 +266,9 @@ while i < len(bilder):
 
 
     # eigentlich nur fürs Debuggen
-    def visualisierung(cropped, aGrayScaleArray, aBinaryArray, Anfangspunkte, Endpunkte, zähler):
+    def visualisierung(cropped, aGrayScaleArray, aBinaryArray,
+                           Anfangspunkte, Endpunkte, zähler,
+                           alle_winkel, schnittpunkt_liste, schneidende_vektoren):
 
         try:
             fig, axes = plt.subplots(2, 2, figsize=(12, 10))
@@ -286,6 +298,11 @@ while i < len(bilder):
                 axes[3].axis("off")
                 axes[3].plot([start[1], ende[1]], [start[0], ende[0]], "r-", linewidth=2)
 
+            for vektoren_paar, schnittpunkt, winkel in zip(schneidende_vektoren, schnittpunkt_liste, alle_winkel):
+                vektor1, vektor2 = vektoren_paar
+                betrag_vektor1 = np.sqrt(vektor1[0]**2 + vektor1[1]**2)
+                betrag_vektor2 = np.sqrt(vektor2[0] ** 2 + vektor2[1] ** 2)
+                axes[3].patches.Arc((schnittpunkt[0], schnittpunkt[1]), betrag_vektor1, betrag_vektor2, winkel)
             plt.tight_layout()
             plt.show()
 
@@ -309,5 +326,4 @@ def final():
     dataframe.to_excel("Resultate3.xlsx", sheet_name="Anzahl", index=False)
     print("fertig")
 
-
-#final()
+# final()
