@@ -10,6 +10,7 @@ https://docs.scipy.org/doc/scipy-1.2.3/reference/generated/scipy.ndimage.label.h
 import shapely
 import numpy
 import numpy as np
+from sympy import *
 from scipy import ndimage
 import matplotlib.pyplot as plt
 import cv2
@@ -123,9 +124,6 @@ while i < len(bilder):
     # für Winkel ein "ruhigeres" Bild nehmen
     def winkel(Anfangspunkte, Endpunkte):
         try:
-            sichere_winkel = []
-            mögliche_winkel = []
-
             def winkel_berechnung(vektor1, vektor2):
                 try:
                     betrag_vektor1 = np.sqrt(vektor1[0]**2 + vektor1[1]**2)
@@ -137,12 +135,45 @@ while i < len(bilder):
                 except Exception as e:
                     print(f"Fehler bei der Winkelberechnung:{e}")
 
+            def schnittpunkt(schneidende_vektoren, vektor_start_ende, Anfangspunkte, Endpunkte):
+                schneidende_vektoren = np.array(schneidende_vektoren)
+                vektor_start_ende = np.array(vektor_start_ende)
+                Anfangspunkte = np.array(Anfangspunkte)
+                Endpunkte = np.array(Endpunkte)
 
-            def schnittpunkte(schneidende_vektoren, vektor_start_ende):
+                k = Symbol("k")
+                l = Symbol("l")
+
+                richtungsvektor1 = k * (vektor_start_ende)
+
+                for vektor2 in schneidende_vektoren:
+                    richtungsvektor2 = l * (vektor2)
+                    gleichung_links = np.array([
+                        [richtungsvektor1[0] - richtungsvektor2[0]],
+                        [richtungsvektor1[1] - richtungsvektor2[1]]
+                    ])
+
+                    gleichung_rechts = np.array([
+                        [Endpunkte[0] - Anfangspunkte[0]],
+                        [Endpunkte[1] - Anfangspunkte[1]]
+                    ])
+                    try:
+                        lösungen = np.linalg.solve(gleichung_links, gleichung_rechts)
+                        schnittpunkt = Endpunkte + (lösungen[1] * (richtungsvektor2))
+                        return schnittpunkt
+
+                    except np.linalg.LinAlgError:
+                        continue
+
+            def schnittwinkel(schneidende_vektoren, vektor_start_ende):
                 try:
+                    sichere_winkel = []
+                    mögliche_winkel = []
                     n_schnitte = len(schneidende_vektoren)
+
                     if n_schnitte == 1:
                         winkel_deg = winkel_berechnung(vektor_start_ende, schneidende_vektoren[0])
+                        schnittpunkt(schneidende_vektoren, vektor_start_ende, Anfangspunkte, Endpunkte)
                         sichere_winkel.append(winkel_deg)
 
                     if n_schnitte > 1:     # nicht die beste Lösung, aber mir fällt nichts Besseres ein ...
@@ -157,29 +188,34 @@ while i < len(bilder):
                     else:
                         print("Ist ein einzelner Strahl oder Buffer zu klein")
 
+                    return sichere_winkel, mögliche_winkel
+
                 except Exception as e:
-                    print(f"Fehler bei der Schnittpunkt-Berechnung:{e}")
+                    print(f"Fehler bei der Winkel-Berechnung:{e}")
+            try:
+                schneidende_vektoren = []
+                for i in range(len(Anfangspunkte)):
+                    vektor_start_ende = shapely.LineString([(Endpunkte[i][0] - Anfangspunkte[i][0]),
+                                                            (Endpunkte[i][1] - Anfangspunkte[i][1])])
 
-            schneidende_vektoren = []
-            for i in range(len(Anfangspunkte)):
-                vektor_start_ende = shapely.LineString([(Endpunkte[i][0] - Anfangspunkte[i][0]),
-                                                        (Endpunkte[i][1] - Anfangspunkte[i][1])])
+                    for j in range(i+1, len(Anfangspunkte)):
+                        vektor_vergs_verge = shapely.LineString([(Endpunkte[j][0] - Anfangspunkte[j][0]),
+                                                                 (Endpunkte[j][1] - Anfangspunkte[j][1])])
+                        buffer_vektorSE = shapely.buffer(vektor_start_ende, 10)
+                        buffer_vektorVsVe = shapely.buffer(vektor_vergs_verge, 10)
 
-                for j in range(i+1, len(Anfangspunkte)):
-                    vektor_vergs_verge = shapely.LineString([(Endpunkte[j][0] - Anfangspunkte[j][0]),
-                                                             (Endpunkte[j][1] - Anfangspunkte[j][1])])
-                    buffer_vektorSE = shapely.buffer(vektor_start_ende, 10)
-                    buffer_vektorVsVe = shapely.buffer(vektor_vergs_verge, 10)
+                        if buffer_vektorSE.intersects(buffer_vektorVsVe):
+                            schneidende_vektoren.append(vektor_vergs_verge)
+                            schnittpunkt = schnittpunkt(schneidende_vektoren, vektor_start_ende, Anfangspunkte[i], Endpunkte[j])
+                            sichere_winkel, mögliche_winkel = schnittwinkel(schneidende_vektoren, vektor_start_ende)
 
-                    if buffer_vektorSE.intersects(buffer_vektorVsVe):
-                        schneidende_vektoren.append(vektor_vergs_verge)
-
-                schnittpunkte(schneidende_vektoren, vektor_start_ende)
+            except Exception as e:
+                print(f"Fehler beim Buffer-bilden:{e}")
 
             return sichere_winkel, mögliche_winkel
 
         except Exception as e:
-            print(f"Fehler bei der Winkelberechnung:{e}")
+            print(f"Fehler bei den Winkeln:{e}")
 
 
     def strahlungs_findung():
