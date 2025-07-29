@@ -8,6 +8,7 @@ connected component filter:
 https://docs.scipy.org/doc/scipy-1.2.3/reference/generated/scipy.ndimage.label.html
 """
 import shapely
+from shapely.geometry import LineString, Point
 import numpy
 import numpy as np
 from sympy import *
@@ -55,7 +56,7 @@ while i < len(bilder):
 
 
     # noinspection PyTypeChecker
-    def croppen():
+    def croppen(image):
         try:
             image = bilder_einlesen()
 
@@ -126,44 +127,27 @@ while i < len(bilder):
         try:
             def winkel_berechnung(vektor1, vektor2):
                 try:
-                    betrag_vektor1 = np.sqrt(vektor1[0] ** 2 + vektor1[1] ** 2)
-                    betrag_vektor2 = np.sqrt(vektor2[0] ** 2 + vektor2[1] ** 2)
+                    betrag_vektor1 = np.linalg.vector_norm(vektor1)
+                    betrag_vektor2 = np.linalg.vector_norm(vektor2)
                     winkel_rad = np.arccos((np.dot(vektor1, vektor2)) / (betrag_vektor1 * betrag_vektor2))
+                    winkel_rad = np.clip(winkel_rad, -1.0, 1.0)
                     winkel_deg = np.rad2deg(winkel_rad)
                     return winkel_deg
 
                 except Exception as e:
                     print(f"Fehler bei der Winkelberechnung:{e}")
 
-            def schnittpunkt_funk(schneidende_vektoren, Anfangspunkte, Endpunkte):
-                schneidende_vektoren = np.array(schneidende_vektoren)
-                Anfangspunkte = np.array(Anfangspunkte)
-                Endpunkte = np.array(Endpunkte)
+            def schnittpunkt_funk(schneidende_vektoren):
+                try:
+                    schneidende_vektoren = np.array(schneidende_vektoren)
+                    for vektor2, vektor1 in schneidende_vektoren:
+                        schnittpunkt = shapely.intersection(vektor2, vektor1)
 
-                k = Symbol("k")
-                l = Symbol("l")
+                        if isinstance(schnittpunkt, Point):
+                            return [schnittpunkt.x, schnittpunkt.y]
 
-
-                for vektor2, vektor1 in schneidende_vektoren:
-                    richtungsvektor1 = k*(vektor1)
-                    richtungsvektor2 = l * (vektor2)
-
-                    gleichung_links = np.array([
-                        [richtungsvektor1[0] - richtungsvektor2[0]],
-                        [richtungsvektor1[1] - richtungsvektor2[1]]
-                    ])
-
-                    gleichung_rechts = np.array([
-                        [Endpunkte[0] - Anfangspunkte[0]],
-                        [Endpunkte[1] - Anfangspunkte[1]]
-                    ])
-                    try:
-                        lösungen = np.linalg.solve(gleichung_links, gleichung_rechts)
-                        schnittpunkt = Endpunkte + (lösungen[1] * (richtungsvektor2))
-                        return schnittpunkt
-
-                    except np.linalg.LinAlgError:
-                        continue
+                except Exception as e:
+                    print(f"Fehler bei der Schnittpunkt-Berechnung:{e}")
 
             def schnittwinkel(schneidende_vektoren):
                 try:
@@ -199,18 +183,18 @@ while i < len(bilder):
                 schneidende_vektoren = []
                 schnittpunkt_liste = []
                 for i in range(len(Anfangspunkte)):
-                    vektor_start_ende = shapely.LineString([(Endpunkte[i][0] - Anfangspunkte[i][0]),
-                                                            (Endpunkte[i][1] - Anfangspunkte[i][1])])
+                    vektor_start_ende = shapely.LineString([(Anfangspunkte[i][0], Anfangspunkte[i][1]),
+                                                            (Endpunkte[i][0], Endpunkte[i][1])])
 
                     for j in range(i + 1, len(Anfangspunkte)):
-                        vektor_vergs_verge = shapely.LineString([(Endpunkte[j][0] - Anfangspunkte[j][0]),
-                                                                 (Endpunkte[j][1] - Anfangspunkte[j][1])])
+                        vektor_vergs_verge = shapely.LineString([(Anfangspunkte[j][0], Anfangspunkte[j][1]),
+                                                                 (Endpunkte[j][0], Endpunkte[j][1])])
                         buffer_vektorSE = shapely.buffer(vektor_start_ende, 10)
                         buffer_vektorVsVe = shapely.buffer(vektor_vergs_verge, 10)
 
                         if buffer_vektorSE.intersects(buffer_vektorVsVe):
-                            schneidende_vektoren.append((vektor_vergs_verge, vektor_start_ende))
-                            schnittpunkt = schnittpunkt_funk(schneidende_vektoren, Anfangspunkte[i], Endpunkte[j])
+                            schneidende_vektoren.extend([vektor_vergs_verge, vektor_start_ende])
+                            schnittpunkt = schnittpunkt_funk(schneidende_vektoren)
 
                             schnittpunkt_liste.append(schnittpunkt)
                             sichere_winkel, mögliche_winkel, alle_winkel = schnittwinkel(schneidende_vektoren)
@@ -255,7 +239,8 @@ while i < len(bilder):
                     zähler = zähler + 1
                     print(zähler)
 
-            sichere_winkel, mögliche_winkel, alle_winkel, schnittpunkt_liste, schneidende_vektoren = winkel_funk(Anfangspunkte, Endpunkte)
+            sichere_winkel, mögliche_winkel, alle_winkel, schnittpunkt_liste, schneidende_vektoren = winkel_funk(
+                Anfangspunkte, Endpunkte)
             visualisierung(cropped, aGrayScaleArray, aBinaryArray,
                            Anfangspunkte, Endpunkte, zähler,
                            alle_winkel, schnittpunkt_liste, schneidende_vektoren)
@@ -267,8 +252,8 @@ while i < len(bilder):
 
     # eigentlich nur fürs Debuggen
     def visualisierung(cropped, aGrayScaleArray, aBinaryArray,
-                           Anfangspunkte, Endpunkte, zähler,
-                           alle_winkel, schnittpunkt_liste, schneidende_vektoren):
+                       Anfangspunkte, Endpunkte, zähler,
+                       alle_winkel, schnittpunkt_liste, schneidende_vektoren):
 
         try:
             fig, axes = plt.subplots(2, 2, figsize=(12, 10))
@@ -300,8 +285,8 @@ while i < len(bilder):
 
             for vektoren_paar, schnittpunkt, winkel in zip(schneidende_vektoren, schnittpunkt_liste, alle_winkel):
                 vektor1, vektor2 = vektoren_paar
-                betrag_vektor1 = np.sqrt(vektor1[0]**2 + vektor1[1]**2)
-                betrag_vektor2 = np.sqrt(vektor2[0] ** 2 + vektor2[1] ** 2)
+                betrag_vektor1 = np.linalg.vector_norm(vektor1)
+                betrag_vektor2 = np.linalg.vector_norm(vektor2)
                 axes[3].patches.Arc((schnittpunkt[0], schnittpunkt[1]), betrag_vektor1, betrag_vektor2, winkel)
             plt.tight_layout()
             plt.show()
