@@ -8,10 +8,9 @@ connected component filter:
 https://docs.scipy.org/doc/scipy-1.2.3/reference/generated/scipy.ndimage.label.html
 """
 import shapely
-from shapely.geometry import LineString, Point
+from shapely.geometry import Point
 import numpy
 import numpy as np
-from sympy import *
 from scipy import ndimage
 import matplotlib.pyplot as plt
 import cv2
@@ -56,7 +55,7 @@ while i < len(bilder):
 
 
     # noinspection PyTypeChecker
-    def croppen(image):
+    def croppen():
         try:
             image = bilder_einlesen()
 
@@ -121,7 +120,6 @@ while i < len(bilder):
         except Exception as e:
             print(f"Fehler beim Labeln der Objekte:{e}")
 
-
     # für Winkel ein "ruhigeres" Bild nehmen
     def winkel_funk(Anfangspunkte, Endpunkte):
         try:
@@ -139,8 +137,8 @@ while i < len(bilder):
 
             def schnittpunkt_funk(schneidende_vektoren):
                 try:
-                    schneidende_vektoren = np.array(schneidende_vektoren)
-                    for vektor2, vektor1 in schneidende_vektoren:
+
+                    for vektor2, vektor1 in zip(schneidende_vektoren[::2], schneidende_vektoren[1::2]):
                         schnittpunkt = shapely.intersection(vektor2, vektor1)
 
                         if isinstance(schnittpunkt, Point):
@@ -180,30 +178,37 @@ while i < len(bilder):
                     print(f"Fehler bei der Winkel-Berechnung:{e}")
 
             try:
-                schneidende_vektoren = []
-                schnittpunkt_liste = []
-                for i in range(len(Anfangspunkte)):
-                    vektor_start_ende = shapely.LineString([(Anfangspunkte[i][0], Anfangspunkte[i][1]),
-                                                            (Endpunkte[i][0], Endpunkte[i][1])])
 
+                schnittpunkt_liste = []
+                gesamt_sichere_winkel = []
+                gesamt_mögliche_winkel = []
+                gesamt_alle_winkel = []
+                for i in range(len(Anfangspunkte)):
+                    sschneidende_vektoren = []
+                    nschneidende_vektoren = []
+                    svektor_start_ende = shapely.LineString([Anfangspunkte[i], Endpunkte[i]])
+                    nvektor_start_ende = np.array([Anfangspunkte[i], Endpunkte[i]])
                     for j in range(i + 1, len(Anfangspunkte)):
-                        vektor_vergs_verge = shapely.LineString([(Anfangspunkte[j][0], Anfangspunkte[j][1]),
-                                                                 (Endpunkte[j][0], Endpunkte[j][1])])
-                        buffer_vektorSE = shapely.buffer(vektor_start_ende, 10)
-                        buffer_vektorVsVe = shapely.buffer(vektor_vergs_verge, 10)
+                        svektor_vergs_verge = shapely.LineString([Anfangspunkte[j], Endpunkte[j]])
+                        nvektor_vergs_verge = np.array([Anfangspunkte[j], Endpunkte[j]])
+                        buffer_vektorSE = shapely.buffer(svektor_start_ende, 10)
+                        buffer_vektorVsVe = shapely.buffer(svektor_vergs_verge, 10)
 
                         if buffer_vektorSE.intersects(buffer_vektorVsVe):
-                            schneidende_vektoren.extend([vektor_vergs_verge, vektor_start_ende])
-                            schnittpunkt = schnittpunkt_funk(schneidende_vektoren)
+                            sschneidende_vektoren.append((svektor_vergs_verge, svektor_start_ende))
+                            nschneidende_vektoren.append((nvektor_vergs_verge, nvektor_start_ende))
 
-                            schnittpunkt_liste.append(schnittpunkt)
-                            sichere_winkel, mögliche_winkel, alle_winkel = schnittwinkel(schneidende_vektoren)
+                    schnittpunkt = schnittpunkt_funk(sschneidende_vektoren)
+                    schnittpunkt_liste.append(schnittpunkt)
+                    sichere_winkel, mögliche_winkel, alle_winkel = schnittwinkel(nschneidende_vektoren)
+                    gesamt_sichere_winkel.extend(sichere_winkel)
+                    gesamt_mögliche_winkel.extend(mögliche_winkel)
+                    gesamt_alle_winkel.extend(alle_winkel)
 
-                return sichere_winkel, mögliche_winkel, alle_winkel, schnittpunkt_liste, schneidende_vektoren
+                return gesamt_sichere_winkel, gesamt_mögliche_winkel, gesamt_alle_winkel, schnittpunkt_liste, nschneidende_vektoren
 
             except Exception as e:
                 print(f"Fehler beim Buffer-bilden:{e}")
-
 
         except Exception as e:
             print(f"Fehler bei den Winkeln:{e}")
@@ -287,7 +292,7 @@ while i < len(bilder):
                 vektor1, vektor2 = vektoren_paar
                 betrag_vektor1 = np.linalg.vector_norm(vektor1)
                 betrag_vektor2 = np.linalg.vector_norm(vektor2)
-                axes[3].patches.Arc((schnittpunkt[0], schnittpunkt[1]), betrag_vektor1, betrag_vektor2, winkel)
+                axes[3].patches.Arc((schnittpunkt[0], schnittpunkt[1]), betrag_vektor1, betrag_vektor2, winkel, "g-")
             plt.tight_layout()
             plt.show()
 
