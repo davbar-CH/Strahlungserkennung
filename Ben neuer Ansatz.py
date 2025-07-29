@@ -92,7 +92,7 @@ while i < len(bilder):
             cropped = masked[y:y + h, x:x + w]
 
             # --- get image data as numpy array (if color tiff may be a 4D RGBA array)
-            imageArray = numpy.array(cropped)
+            imageArray = np.array(cropped)
             print("geht2")
             return cropped, imageArray
 
@@ -135,77 +135,44 @@ while i < len(bilder):
                 except Exception as e:
                     print(f"Fehler bei der Winkelberechnung:{e}")
 
-            def schnittpunkt_funk(schneidende_vektoren):
-                try:
-
-                    for vektor2, vektor1 in zip(schneidende_vektoren[::2], schneidende_vektoren[1::2]):
-                        schnittpunkt = shapely.intersection(vektor2, vektor1)
-
-                        if isinstance(schnittpunkt, Point):
-                            return [schnittpunkt.x, schnittpunkt.y]
-
-                except Exception as e:
-                    print(f"Fehler bei der Schnittpunkt-Berechnung:{e}")
-
-            def schnittwinkel(schneidende_vektoren):
-                try:
-                    alle_winkel = []
-                    sichere_winkel = []
-                    mögliche_winkel = []
-                    n_schnitte = len(schneidende_vektoren)
-
-                    if n_schnitte == 1:
-                        winkel_deg = winkel_berechnung(schneidende_vektoren[0][0], schneidende_vektoren[0][1])
-                        sichere_winkel.append(winkel_deg)
-                        alle_winkel.append(winkel_deg)
-
-                    if n_schnitte > 1:  # nicht die beste Lösung, aber mir fällt nichts Besseres ein ...
-                        for vektor_verg, vektor_start_ende in schneidende_vektoren:
-                            winkel_deg = winkel_berechnung(vektor_start_ende, vektor_verg)
-                            print(f"Winkel zwischen zwei Strahlen:{winkel_deg}")
-                            if winkel_deg > 10:
-                                mögliche_winkel.append(winkel_deg)
-                                alle_winkel.append(winkel_deg)
-                            else:
-                                print("Wahrscheinlich ein falscher Winkel")
-
-                    else:
-                        print("Ist ein einzelner Strahl oder Buffer zu klein")
-
-                    return sichere_winkel, mögliche_winkel, alle_winkel
-
-                except Exception as e:
-                    print(f"Fehler bei der Winkel-Berechnung:{e}")
-
             try:
-
                 schnittpunkt_liste = []
-                gesamt_sichere_winkel = []
-                gesamt_mögliche_winkel = []
-                gesamt_alle_winkel = []
+                alle_winkel = []
+                sichere_winkel = []
+                mögliche_winkel = []
+
                 for i in range(len(Anfangspunkte)):
-                    sschneidende_vektoren = []
-                    nschneidende_vektoren = []
+                    n_schnitte = []
                     svektor_start_ende = shapely.LineString([Anfangspunkte[i], Endpunkte[i]])
                     nvektor_start_ende = np.array([Anfangspunkte[i], Endpunkte[i]])
+
                     for j in range(i + 1, len(Anfangspunkte)):
                         svektor_vergs_verge = shapely.LineString([Anfangspunkte[j], Endpunkte[j]])
+                        global nvektor_vergs_verge
                         nvektor_vergs_verge = np.array([Anfangspunkte[j], Endpunkte[j]])
                         buffer_vektorSE = shapely.buffer(svektor_start_ende, 10)
                         buffer_vektorVsVe = shapely.buffer(svektor_vergs_verge, 10)
 
                         if buffer_vektorSE.intersects(buffer_vektorVsVe):
-                            sschneidende_vektoren.append((svektor_vergs_verge, svektor_start_ende))
-                            nschneidende_vektoren.append((nvektor_vergs_verge, nvektor_start_ende))
+                            schnittpunkt = shapely.intersection(svektor_start_ende, svektor_vergs_verge)
+                            schnittpunkt_liste.append(schnittpunkt)
+                            n_schnitte.append(True)
 
-                    schnittpunkt = schnittpunkt_funk(sschneidende_vektoren)
-                    schnittpunkt_liste.append(schnittpunkt)
-                    sichere_winkel, mögliche_winkel, alle_winkel = schnittwinkel(nschneidende_vektoren)
-                    gesamt_sichere_winkel.extend(sichere_winkel)
-                    gesamt_mögliche_winkel.extend(mögliche_winkel)
-                    gesamt_alle_winkel.extend(alle_winkel)
+                    if n_schnitte.count(True) == 1:
+                        winkel_deg = winkel_berechnung(nvektor_start_ende, nvektor_vergs_verge)
+                        sichere_winkel.append(winkel_deg)
+                        alle_winkel.append(winkel_deg)
 
-                return gesamt_sichere_winkel, gesamt_mögliche_winkel, gesamt_alle_winkel, schnittpunkt_liste, nschneidende_vektoren
+                    if n_schnitte.count(True) > 1:
+                        winkel_deg = winkel_berechnung(nvektor_start_ende, nvektor_vergs_verge)
+                        alle_winkel.append(winkel_deg)
+                        print(f"Winkel zwischen zwei Strahlen:{winkel_deg}")
+                        if winkel_deg > 10:
+                            mögliche_winkel.append(winkel_deg)
+                        else:
+                            print("Wahrscheinlich ein falscher Winkel")
+
+                return sichere_winkel, mögliche_winkel, alle_winkel, schnittpunkt_liste
 
             except Exception as e:
                 print(f"Fehler beim Buffer-bilden:{e}")
@@ -244,11 +211,10 @@ while i < len(bilder):
                     zähler = zähler + 1
                     print(zähler)
 
-            sichere_winkel, mögliche_winkel, alle_winkel, schnittpunkt_liste, schneidende_vektoren = winkel_funk(
-                Anfangspunkte, Endpunkte)
+            sichere_winkel, mögliche_winkel, alle_winkel, schnittpunkt_liste = winkel_funk(Anfangspunkte, Endpunkte)
             visualisierung(cropped, aGrayScaleArray, aBinaryArray,
                            Anfangspunkte, Endpunkte, zähler,
-                           alle_winkel, schnittpunkt_liste, schneidende_vektoren)
+                           alle_winkel, schnittpunkt_liste)
             return zähler, sichere_winkel, mögliche_winkel
 
         except Exception as e:
@@ -258,7 +224,7 @@ while i < len(bilder):
     # eigentlich nur fürs Debuggen
     def visualisierung(cropped, aGrayScaleArray, aBinaryArray,
                        Anfangspunkte, Endpunkte, zähler,
-                       alle_winkel, schnittpunkt_liste, schneidende_vektoren):
+                       alle_winkel, schnittpunkt_liste):
 
         try:
             fig, axes = plt.subplots(2, 2, figsize=(12, 10))
