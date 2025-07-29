@@ -8,12 +8,14 @@ connected component filter:
 https://docs.scipy.org/doc/scipy-1.2.3/reference/generated/scipy.ndimage.label.html
 """
 import shapely
-from shapely.geometry import Point
 import numpy
 import numpy as np
 from scipy import ndimage
 import matplotlib.pyplot as plt
+
 import cv2
+from shapely import Point
+from shapely.ops import nearest_points
 from sklearn.decomposition import PCA
 import glob
 import os
@@ -120,6 +122,7 @@ while i < len(bilder):
         except Exception as e:
             print(f"Fehler beim Labeln der Objekte:{e}")
 
+
     # für Winkel ein "ruhigeres" Bild nehmen
     def winkel_funk(Anfangspunkte, Endpunkte):
         try:
@@ -135,47 +138,46 @@ while i < len(bilder):
                 except Exception as e:
                     print(f"Fehler bei der Winkelberechnung:{e}")
 
-            try:
-                schnittpunkt_liste = []
-                alle_winkel = []
-                sichere_winkel = []
-                mögliche_winkel = []
+            schnittpunkt_liste = []
+            alle_winkel = []
+            sichere_winkel = []
+            mögliche_winkel = []
+            schneidende_vektoren = []
 
-                for i in range(len(Anfangspunkte)):
-                    n_schnitte = []
-                    svektor_start_ende = shapely.LineString([Anfangspunkte[i], Endpunkte[i]])
-                    nvektor_start_ende = np.array([Anfangspunkte[i], Endpunkte[i]])
+            for i in range(len(Anfangspunkte)):
+                anzahl_schnitte = 0
+                linie1 = shapely.LineString([Anfangspunkte[i], Endpunkte[i]])
+                vektor1 = np.array(Endpunkte[i]) - np.array(Anfangspunkte[i])
 
-                    for j in range(i + 1, len(Anfangspunkte)):
-                        svektor_vergs_verge = shapely.LineString([Anfangspunkte[j], Endpunkte[j]])
-                        global nvektor_vergs_verge
-                        nvektor_vergs_verge = np.array([Anfangspunkte[j], Endpunkte[j]])
-                        buffer_vektorSE = shapely.buffer(svektor_start_ende, 10)
-                        buffer_vektorVsVe = shapely.buffer(svektor_vergs_verge, 10)
+                for j in range(i + 1, len(Anfangspunkte)):
+                    linie2 = shapely.LineString([Anfangspunkte[j], Endpunkte[j]])
+                    global vektor2
+                    vektor2 = np.array(Endpunkte[j]) - np.array(Anfangspunkte[j])
 
-                        if buffer_vektorSE.intersects(buffer_vektorVsVe):
-                            schnittpunkt = shapely.intersection(svektor_start_ende, svektor_vergs_verge)
-                            schnittpunkt_liste.append(schnittpunkt)
-                            n_schnitte.append(True)
+                    pt1, pt2 = nearest_points(linie1, linie2)
 
-                    if n_schnitte.count(True) == 1:
-                        winkel_deg = winkel_berechnung(nvektor_start_ende, nvektor_vergs_verge)
-                        sichere_winkel.append(winkel_deg)
-                        alle_winkel.append(winkel_deg)
+                    if pt1.distance(pt2) <= 50:
+                        schnittpunkt_liste.append(Point((pt1.x + pt2.x)/2, (pt1.y + pt2.y)/2))
 
-                    if n_schnitte.count(True) > 1:
-                        winkel_deg = winkel_berechnung(nvektor_start_ende, nvektor_vergs_verge)
-                        alle_winkel.append(winkel_deg)
-                        print(f"Winkel zwischen zwei Strahlen:{winkel_deg}")
-                        if winkel_deg > 10:
-                            mögliche_winkel.append(winkel_deg)
-                        else:
-                            print("Wahrscheinlich ein falscher Winkel")
+                        anzahl_schnitte = anzahl_schnitte + 1
+                        schneidende_vektoren.append((vektor1, vektor2))
+                if anzahl_schnitte == 1:
+                    winkel_deg = winkel_berechnung(vektor1, vektor2)
+                    sichere_winkel.append(winkel_deg)
+                    alle_winkel.append(winkel_deg)
 
-                return sichere_winkel, mögliche_winkel, alle_winkel, schnittpunkt_liste
+                if anzahl_schnitte > 1:
+                    winkel_deg = winkel_berechnung(vektor1, vektor2)
+                    alle_winkel.append(winkel_deg)
+                    print(f"Winkel zwischen zwei Strahlen:{winkel_deg}")
+                    if winkel_deg > 10:
+                        mögliche_winkel.append(winkel_deg)
+                    else:
+                        print("Wahrscheinlich ein falscher Winkel")
 
-            except Exception as e:
-                print(f"Fehler beim Buffer-bilden:{e}")
+                if anzahl_schnitte < 1:
+                    print("Wahrscheinlich ein einzelner Strahl")
+            return sichere_winkel, mögliche_winkel, alle_winkel, schnittpunkt_liste, schneidende_vektoren
 
         except Exception as e:
             print(f"Fehler bei den Winkeln:{e}")
@@ -211,7 +213,8 @@ while i < len(bilder):
                     zähler = zähler + 1
                     print(zähler)
 
-            sichere_winkel, mögliche_winkel, alle_winkel, schnittpunkt_liste = winkel_funk(Anfangspunkte, Endpunkte)
+            sichere_winkel, mögliche_winkel, alle_winkel, schnittpunkt_liste, schneidende_vektoren = winkel_funk(
+                Anfangspunkte, Endpunkte)
             visualisierung(cropped, aGrayScaleArray, aBinaryArray,
                            Anfangspunkte, Endpunkte, zähler,
                            alle_winkel, schnittpunkt_liste)
@@ -227,38 +230,35 @@ while i < len(bilder):
                        alle_winkel, schnittpunkt_liste):
 
         try:
-            fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-            axes = axes.ravel()
+            fig, ax = plt.subplots(2, 2, figsize=(12, 10))
 
             # Originalbild
-            axes[0].imshow(cropped)
-            axes[0].set_title("Originalbild")
-            axes[0].axis("off")
+            ax[0, 0].imshow(cropped)
+            ax[0, 0].set_title("Originalbild")
+            ax[0, 0].axis("off")
 
             # Graubild
-            axes[1].imshow(aGrayScaleArray, cmap="gray")
-            axes[1].set_title("Graustufenbild")
-            axes[1].axis("off")
+            ax[0, 1].imshow(aGrayScaleArray, cmap="gray")
+            ax[0, 1].set_title("Graustufenbild")
+            ax[0, 1].axis("off")
 
             # Binärbild
-            axes[2].imshow(aBinaryArray, cmap="gray")
-            axes[2].set_title("Binärbild (nach Threshold)")
-            axes[2].axis("off")
+            ax[1, 0].imshow(aBinaryArray, cmap="gray")
+            ax[1, 0].set_title("Binärbild (nach Threshold)")
+            ax[1, 0].axis("off")
 
             # Gelabelte Objekte
-            for start, ende in zip(Anfangspunkte, Endpunkte):
-                axes[3].set_facecolor("#20423c")
-                axes[3].imshow(aGrayScaleArray,
-                               cmap="gray")
-                axes[3].set_title(f"Gelabelte Objekte (Anzahl: {zähler})")
-                axes[3].axis("off")
-                axes[3].plot([start[1], ende[1]], [start[0], ende[0]], "r-", linewidth=2)
+            ax[1, 1].set_facecolor("#20423c")
+            ax[1, 1].imshow(aGrayScaleArray, cmap="gray")
+            ax[1, 1].set_title(f"Gelabelte Objekte (Anzahl: {zähler})")
+            ax[1, 1].axis("off")
 
-            for vektoren_paar, schnittpunkt, winkel in zip(schneidende_vektoren, schnittpunkt_liste, alle_winkel):
-                vektor1, vektor2 = vektoren_paar
-                betrag_vektor1 = np.linalg.vector_norm(vektor1)
-                betrag_vektor2 = np.linalg.vector_norm(vektor2)
-                axes[3].patches.Arc((schnittpunkt[0], schnittpunkt[1]), betrag_vektor1, betrag_vektor2, winkel, "g-")
+            for start, ende in zip(Anfangspunkte, Endpunkte):
+                ax[1, 1].plot([start[1], ende[1]], [start[0], ende[0]], "r-", linewidth=2)
+
+            for schnittpunkt, winkel in zip(schnittpunkt_liste, alle_winkel):
+                ax[1, 1].plot(schnittpunkt.y, schnittpunkt.x, "o", markersize=5, color="green", label=f"Winkel:{winkel:.2f}°")
+
             plt.tight_layout()
             plt.show()
 
