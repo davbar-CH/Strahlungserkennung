@@ -1,4 +1,5 @@
 import cv2
+from shapely import Point
 from skimage.feature import canny
 import numpy as np
 import glob
@@ -6,6 +7,8 @@ import os
 import matplotlib.pyplot as plt
 from skimage.transform import probabilistic_hough_line
 from itertools import chain
+from shapely.geometry import LineString
+from shapely.ops import unary_union
 
 # hier den jeweiligen Bildpfad einfügen oder ansonsten config file
 folder_path = r"C:\Dokumente 2\Matura Data\Matura Data komplett\902D7200\902D7200"
@@ -130,6 +133,7 @@ def punkt_auf_gerade(punkte_plot, Startpunkte, Endpunkte):
     ax[2].plot((punkte_plot[3][0], punkte_plot[0][0]), (punkte_plot[3][1], punkte_plot[0][1]), color="blue")
     geraden_liste.append((m1, q1))
 
+    fragment_linien = []
     for p0, p1 in zip(Startpunkte, Endpunkte):
         zu_nah = False
         for m, q in geraden_liste:
@@ -141,9 +145,27 @@ def punkt_auf_gerade(punkte_plot, Startpunkte, Endpunkte):
                 zu_nah = True
                 break
         if not zu_nah:
-            length = np.sqrt((p1[0] - p0[0]) ** 2 + (p1[1] - p0[1]) ** 2)
-            ax[2].plot((p0[0], p1[0]), (p0[1], p1[1]), color="red")
-            längen_liste.append(length)
+            linie = LineString([p0, p1])
+            fragment_linien.append(linie)
+
+    buffer_linien = [linie.buffer(0.5) for linie in fragment_linien]
+    zusammen_polygone = unary_union(buffer_linien)
+    zusammen_linien = zusammen_polygone.boundary
+
+    boundary_punkte = []
+    for linie in zusammen_linien.geoms:
+        boundary_punkte.append(list(linie.coords))
+        x, y = linie.xy
+        ax[2].plot(x, y, color="red")
+
+    for punkt in boundary_punkte:
+        nördlichster_punkt = min(punkt, key=lambda p: p[1])
+        südlichster_punkt = max(punkt, key=lambda p: p[1])
+        snördlichster_punkt = Point(nördlichster_punkt)
+        ssüdlichster_punkt = Point(südlichster_punkt)
+        längen = snördlichster_punkt.distance(ssüdlichster_punkt)
+        print(längen)
+        längen_liste.append(längen)
 
     return längen_liste
 
