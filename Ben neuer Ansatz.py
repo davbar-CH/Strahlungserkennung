@@ -12,7 +12,6 @@ import numpy
 import numpy as np
 from scipy import ndimage
 import matplotlib.pyplot as plt
-
 import cv2
 from shapely import Point
 from shapely.ops import nearest_points
@@ -28,7 +27,7 @@ folder_path = r"C:\Dokumente 2\Matura Data\Matura Data komplett\902D7200\Data Mo
 def bilder_einfügen():
     try:
         bilder = []
-        for i in glob.glob(os.path.join(folder_path, "DSC_0367.JPG")):
+        for i in glob.glob(os.path.join(folder_path, "DSC_0368.JPG")):
             bilder.append(i)
         print(bilder)
         print(f"Es wurden {len(bilder)} Bilder gefunden!")
@@ -41,7 +40,9 @@ def bilder_einfügen():
 bilder = bilder_einfügen()
 i = 0
 Zähler_Liste = []
-Winkel_Liste = []
+sichere_Winkel_Liste = []
+mögliche_Winkel_Liste = []
+alle_Winkel_Liste = []
 
 while i < len(bilder):
     def bilder_einlesen():
@@ -142,42 +143,44 @@ while i < len(bilder):
             alle_winkel = []
             sichere_winkel = []
             mögliche_winkel = []
-            schneidende_vektoren = []
 
             for i in range(len(Anfangspunkte)):
+                schneidende_vektoren = []
                 anzahl_schnitte = 0
                 linie1 = shapely.LineString([Anfangspunkte[i], Endpunkte[i]])
                 vektor1 = np.array(Endpunkte[i]) - np.array(Anfangspunkte[i])
 
                 for j in range(i + 1, len(Anfangspunkte)):
                     linie2 = shapely.LineString([Anfangspunkte[j], Endpunkte[j]])
-                    global vektor2
                     vektor2 = np.array(Endpunkte[j]) - np.array(Anfangspunkte[j])
 
                     pt1, pt2 = nearest_points(linie1, linie2)
 
                     if pt1.distance(pt2) <= 50:
-                        schnittpunkt_liste.append(Point((pt1.x + pt2.x)/2, (pt1.y + pt2.y)/2))
-
+                        schnittpunkt_liste.append(Point((pt1.x + pt2.x) / 2, (pt1.y + pt2.y) / 2))
                         anzahl_schnitte = anzahl_schnitte + 1
                         schneidende_vektoren.append((vektor1, vektor2))
+
                 if anzahl_schnitte == 1:
-                    winkel_deg = winkel_berechnung(vektor1, vektor2)
-                    sichere_winkel.append(winkel_deg)
-                    alle_winkel.append(winkel_deg)
+                    for vektor1, vektor2 in schneidende_vektoren:
+                        winkel_deg = winkel_berechnung(vektor1, vektor2)
+                        sichere_winkel.append(winkel_deg)
+                        alle_winkel.append(winkel_deg)
+                        print(f"Winkel zwischen zwei Strahlen:{winkel_deg}")
 
                 if anzahl_schnitte > 1:
-                    winkel_deg = winkel_berechnung(vektor1, vektor2)
-                    alle_winkel.append(winkel_deg)
-                    print(f"Winkel zwischen zwei Strahlen:{winkel_deg}")
-                    if winkel_deg > 10:
-                        mögliche_winkel.append(winkel_deg)
-                    else:
-                        print("Wahrscheinlich ein falscher Winkel")
+                    for vektor1, vektor2 in schneidende_vektoren:
+                        winkel_deg = winkel_berechnung(vektor1, vektor2)
+                        alle_winkel.append(winkel_deg)
+                        print(f"Winkel zwischen zwei Strahlen:{winkel_deg}")
+                        if winkel_deg > 10:
+                            mögliche_winkel.append(winkel_deg)
+                        else:
+                            print("Wahrscheinlich ein falscher Winkel")
 
                 if anzahl_schnitte < 1:
                     print("Wahrscheinlich ein einzelner Strahl")
-            return sichere_winkel, mögliche_winkel, alle_winkel, schnittpunkt_liste, schneidende_vektoren
+            return sichere_winkel, mögliche_winkel, alle_winkel, schnittpunkt_liste
 
         except Exception as e:
             print(f"Fehler bei den Winkeln:{e}")
@@ -213,12 +216,12 @@ while i < len(bilder):
                     zähler = zähler + 1
                     print(zähler)
 
-            sichere_winkel, mögliche_winkel, alle_winkel, schnittpunkt_liste, schneidende_vektoren = winkel_funk(
+            sichere_winkel, mögliche_winkel, alle_winkel, schnittpunkt_liste = winkel_funk(
                 Anfangspunkte, Endpunkte)
             visualisierung(cropped, aGrayScaleArray, aBinaryArray,
                            Anfangspunkte, Endpunkte, zähler,
                            alle_winkel, schnittpunkt_liste)
-            return zähler, sichere_winkel, mögliche_winkel
+            return zähler, sichere_winkel, mögliche_winkel, alle_winkel
 
         except Exception as e:
             print(f"Fehler im Hauptprogramm:{e}")
@@ -257,7 +260,8 @@ while i < len(bilder):
                 ax[1, 1].plot([start[1], ende[1]], [start[0], ende[0]], "r-", linewidth=2)
 
             for schnittpunkt, winkel in zip(schnittpunkt_liste, alle_winkel):
-                ax[1, 1].plot(schnittpunkt.y, schnittpunkt.x, "o", markersize=5, color="green", label=f"Winkel:{winkel:.2f}°")
+                ax[1, 1].plot(schnittpunkt.y, schnittpunkt.x, "o", markersize=5, color="green",
+                              label=f"Winkel:{winkel:.2f}°")
 
             plt.tight_layout()
             plt.show()
@@ -266,20 +270,24 @@ while i < len(bilder):
             print(f"Fehler bei der Visualisierung:{e}")
 
 
-    zähler, sichere_winkel, mögliche_winkel = strahlungs_findung()
+    zähler, sichere_winkel, mögliche_winkel, alle_winkel = strahlungs_findung()
+    sichere_Winkel_Liste.extend(sichere_winkel)
+    mögliche_Winkel_Liste.extend(mögliche_winkel)
+    alle_Winkel_Liste.extend(alle_winkel)
     Zähler_Liste.append(zähler)
     i = i + 1
 
-while len(Winkel_Liste) < len(Zähler_Liste):
-    Winkel_Liste.append("0")
-
-while len(Winkel_Liste) > len(Zähler_Liste):
-    Zähler_Liste.append("0")
+while len(mögliche_Winkel_Liste) < len(alle_Winkel_Liste) and len(sichere_Winkel_Liste) < len(Zähler_Liste):
+    mögliche_Winkel_Liste.append("0")
+    sichere_Winkel_Liste.append("0")
 
 
 def final():
-    dataframe = DataFrame({"Anzahl Strahlen": Zähler_Liste})
-    dataframe.to_excel("Resultate3.xlsx", sheet_name="Anzahl", index=False)
+    dataframe1 = DataFrame({"Anzahl Strahlen": Zähler_Liste})
+    dataframe1.to_excel("Resultate_zaehler.xlsx", sheet_name="Anzahl", index=False)
+    dataframe2 = DataFrame({"Anzahl Strahlen": Zähler_Liste})
+    dataframe2.to_excel("Resultate_winkel.xlsx", sheet_name="Winkel", index=False)
     print("fertig")
 
-# final()
+
+final()
