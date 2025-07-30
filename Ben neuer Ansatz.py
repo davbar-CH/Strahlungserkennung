@@ -56,7 +56,6 @@ while i < len(bilder):
         except Exception as e:
             print(f"Fehler beim Einlesen des Bildes:{e}")
 
-
     # noinspection PyTypeChecker
     def croppen():
         try:
