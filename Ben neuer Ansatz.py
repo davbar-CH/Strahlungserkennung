@@ -7,8 +7,8 @@ https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.generate_bina
 connected component filter:
 https://docs.scipy.org/doc/scipy-1.2.3/reference/generated/scipy.ndimage.label.html
 """
+import sys
 import shapely
-import numpy
 import numpy as np
 from scipy import ndimage
 import matplotlib.pyplot as plt
@@ -23,6 +23,20 @@ from pandas import DataFrame
 # hier den jeweiligen Bildpfad einfügen oder ansonsten config file
 folder_path = r"C:\Dokumente 2\Matura Data\Matura Data komplett\902D7200\Data Modus 2-2"
 
+def debug_enabled():
+    try:
+        if sys.gettrace() is not None:
+            return True
+    except AttributeError:
+        pass
+
+    try:
+        if sys.monitoring.get_tool(sys.monitoring.DEBUGGER_ID) is not None:
+            return True
+    except AttributeError:
+        pass
+
+    return False
 
 def bilder_einfügen():
     try:
@@ -106,7 +120,7 @@ while i < len(bilder):
         try:
             temp, imageArray = croppen()
             # --- collapse array (sum all color channels to make grayscale)
-            aGrayScaleArray = numpy.sum(imageArray, axis=2).astype(numpy.int64)
+            aGrayScaleArray = np.sum(imageArray, axis=2).astype(np.int64)
             # treshhold empirisch gefunden, alternativ otsu-methode, dauert aber
             threshold = 220  # 120 für Strahlungserkennung und 300 für Winkel
             # ---- threshold array
@@ -193,12 +207,12 @@ while i < len(bilder):
             Endpunkte = []
             # ---- get object dimensions
             # aVal[0] is a labeled image where each object has a separate label (incl. background)
-            objectLabels = numpy.unique(aVal[0])
+            objectLabels = np.unique(aVal[0])
             print("geht4")
             zähler = 0
             for xx in objectLabels[1:]:
                 aObj = aVal[0] == xx
-                aP_all = numpy.argwhere(aObj)
+                aP_all = np.argwhere(aObj)
 
                 if len(aP_all) > 170:  # PCA benötigt mind. 3 Punkte
                     pca = PCA(n_components=1)
@@ -217,9 +231,10 @@ while i < len(bilder):
 
             sichere_winkel, mögliche_winkel, alle_winkel, schnittpunkt_liste = winkel_funk(
                 Anfangspunkte, Endpunkte)
-            visualisierung(cropped, aGrayScaleArray, aBinaryArray,
-                           Anfangspunkte, Endpunkte, zähler,
-                           alle_winkel, schnittpunkt_liste)
+            if debug_enabled() is True:
+                visualisierung(cropped, aGrayScaleArray, aBinaryArray,
+                               Anfangspunkte, Endpunkte, zähler,
+                               alle_winkel, schnittpunkt_liste)
             return zähler, sichere_winkel, mögliche_winkel, alle_winkel
 
         except Exception as e:
@@ -275,11 +290,6 @@ while i < len(bilder):
     alle_Winkel_Liste.extend(alle_winkel)
     Zähler_Liste.append(zähler)
     i = i + 1
-
-while len(mögliche_Winkel_Liste) < len(alle_Winkel_Liste) and len(sichere_Winkel_Liste) < len(Zähler_Liste):
-    mögliche_Winkel_Liste.append("0")
-    sichere_Winkel_Liste.append("0")
-
 
 def final():
     dataframe1 = DataFrame({"Anzahl Strahlen": Zähler_Liste})
