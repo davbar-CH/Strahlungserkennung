@@ -1,6 +1,9 @@
 import sys
+from logging import exception
+from types import NoneType
+
 import cv2
-from shapely import Point
+from shapely import Point, MultiLineString
 from skimage.feature import canny
 import numpy as np
 import glob
@@ -13,7 +16,7 @@ from shapely.ops import unary_union
 from pandas import DataFrame
 
 # hier den jeweiligen Bildpfad einfügen oder ansonsten config file
-folder_path = r"C:\Dokumente 2\Matura Data\Matura Data komplett\902D7200\Data Modus 2-2"
+folder_path = r"C:\schulisches\Matura\Daten\matura data\length3"
 
 
 # diese funktioniert für mich, in pycharm. Je nach IDE muss diese Funktion geändert werden
@@ -36,7 +39,7 @@ def debug_enabled():
 def bilder_einfügen():
     try:
         bilder = []
-        for i in glob.glob(os.path.join(folder_path, "DSC_0300.JPG")):
+        for i in glob.glob(os.path.join(folder_path, "DSC_*.JPG")):
             bilder.append(i)
         print(bilder)
         print(f"Es wurden {len(bilder)} Bilder gefunden!")
@@ -75,10 +78,10 @@ while i < len(bilder):
             # Punkte für Ecken des Bildes, bilden Viereck, damit der Rand der Nebelkammer weg ist.
             # Punkte müssen ebenfalls skaliert werden
             punkte = np.array([
-                [970, 1550],  # oben links
-                [3000, 440],  # oben rechts
-                [4400, 2187],  # unten rechts
-                [2400, 3760]  # unten links
+                [1313, 63],  # oben links
+                [2148, 646],  # oben rechts
+                [1414, 1472],  # unten rechts
+                [552, 738]  # unten links
             ], dtype=np.int32)
 
             punkte_skal = (punkte * skalierung).astype(np.int32)
@@ -170,12 +173,26 @@ while i < len(bilder):
                 linie = LineString([p0, p1])
                 fragment_linien.append(linie)
 
-        buffer_linien = [linie.buffer(0.5) for linie in fragment_linien]
-        zusammen_polygone = unary_union(buffer_linien)
-        zusammen_linien = zusammen_polygone.boundary
+        if not fragment_linien:
+            längen_liste.append("0")
+            return längen_liste
+        try:
+            buffer_linien = [linie.buffer(0.5) for linie in fragment_linien]
+            zusammen_polygone = unary_union(buffer_linien)
+            zusammen_linien = zusammen_polygone.boundary
+        except Exception:
+            längen_liste.append("0")
+            return längen_liste
+
+        if isinstance(zusammen_linien, MultiLineString):
+            linien_iterierbar = zusammen_linien.geoms
+        elif isinstance(zusammen_linien, LineString):
+            linien_iterierbar = [zusammen_linien]
+        else:
+            linien_iterierbar = []
 
         boundary_punkte = []
-        for linie in zusammen_linien.geoms:
+        for linie in linien_iterierbar:
             boundary_punkte.append(list(linie.coords))
             x, y = linie.xy
             if ax is not None:
@@ -242,6 +259,7 @@ while i < len(bilder):
         i = i + 1
     except TypeError:
         print("Gerade im Debugmodus")
+        i = i + 1
 
 dataframe1 = DataFrame({"Längen": längen_liste_gesamt})
 dataframe1.to_excel("Resultate_laengen.xlsx", sheet_name="Laengen", index=False)
