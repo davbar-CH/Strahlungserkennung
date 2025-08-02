@@ -21,7 +21,7 @@ import os
 from pandas import DataFrame
 
 # hier den jeweiligen Bildpfad einfügen oder ansonsten config file
-folder_path = r"C:\Dokumente 2\Matura Data\Matura Data komplett\902D7200\Data Modus 2-2"
+folder_path = r"C:\schulisches\Matura\Daten\Data Modus 2-2"
 
 def debug_enabled():
     try:
@@ -41,7 +41,7 @@ def debug_enabled():
 def bilder_einfügen():
     try:
         bilder = []
-        for i in glob.glob(os.path.join(folder_path, "DSC_0368.JPG")):
+        for i in glob.glob(os.path.join(folder_path, "DSC_0512.JPG")):
             bilder.append(i)
         print(bilder)
         print(f"Es wurden {len(bilder)} Bilder gefunden!")
@@ -142,11 +142,14 @@ while i < len(bilder):
         try:
             def winkel_berechnung(vektor1, vektor2):
                 try:
-                    betrag_vektor1 = np.linalg.vector_norm(vektor1)
-                    betrag_vektor2 = np.linalg.vector_norm(vektor2)
-                    winkel_rad = np.arccos((np.dot(vektor1, vektor2)) / (betrag_vektor1 * betrag_vektor2))
-                    winkel_rad = np.clip(winkel_rad, -1.0, 1.0)
+                    betrag_vektor1 = np.linalg.norm(vektor1)
+                    betrag_vektor2 = np.linalg.norm(vektor2)
+                    skalarprodukt = (vektor1[0] * vektor2[0]) + (vektor1[1] * vektor2[1])
+                    cos_winkel = skalarprodukt / (betrag_vektor1 * betrag_vektor2)
+                    cos_winkel = np.clip(cos_winkel, -1.0, 1.0)
+                    winkel_rad = np.arccos(cos_winkel)
                     winkel_deg = np.rad2deg(winkel_rad)
+                    print(betrag_vektor1, betrag_vektor2, winkel_rad, winkel_deg)
                     return winkel_deg
 
                 except Exception as e:
@@ -162,20 +165,23 @@ while i < len(bilder):
                 anzahl_schnitte = 0
                 linie1 = shapely.LineString([Anfangspunkte[i], Endpunkte[i]])
                 vektor1 = np.array(Endpunkte[i]) - np.array(Anfangspunkte[i])
+                print(Endpunkte[i], Anfangspunkte[i], "vektor1")
 
                 for j in range(i + 1, len(Anfangspunkte)):
                     linie2 = shapely.LineString([Anfangspunkte[j], Endpunkte[j]])
                     vektor2 = np.array(Endpunkte[j]) - np.array(Anfangspunkte[j])
-
+                    print(Endpunkte[j], Anfangspunkte[j], "vektoren")
                     pt1, pt2 = nearest_points(linie1, linie2)
 
                     if pt1.distance(pt2) <= 50:
                         schnittpunkt_liste.append(Point((pt1.x + pt2.x) / 2, (pt1.y + pt2.y) / 2))
+                        print(Point((pt1.x + pt2.x) / 2, (pt1.y + pt2.y) / 2), "der Schnittpunkt")
                         anzahl_schnitte = anzahl_schnitte + 1
                         schneidende_vektoren.append((vektor1, vektor2))
 
                 if anzahl_schnitte == 1:
                     for vektor1, vektor2 in schneidende_vektoren:
+                        print(vektor1, vektor2)
                         winkel_deg = winkel_berechnung(vektor1, vektor2)
                         sichere_winkel.append(winkel_deg)
                         alle_winkel.append(winkel_deg)
@@ -222,7 +228,8 @@ while i < len(bilder):
 
                     start = mittelpunkt - 50 * richtung
                     ende = mittelpunkt + 50 * richtung
-
+                    print(start, "Startpunkt")
+                    print(ende, "Endpunkt")
                     Anfangspunkte.append(start)
                     Endpunkte.append(ende)
 
@@ -291,10 +298,19 @@ while i < len(bilder):
     Zähler_Liste.append(zähler)
     i = i + 1
 
+while len(sichere_Winkel_Liste) < len(alle_Winkel_Liste) or len(mögliche_Winkel_Liste) < len(alle_Winkel_Liste):
+    if len(sichere_Winkel_Liste) < len(alle_Winkel_Liste):
+        sichere_Winkel_Liste.append("0")
+    if len(mögliche_Winkel_Liste) < len(alle_Winkel_Liste):
+        mögliche_Winkel_Liste.append("0")
+
 def final():
-    dataframe1 = DataFrame({"Anzahl Strahlen": Zähler_Liste})
-    dataframe1.to_excel("Resultate_zaehler.xlsx", sheet_name="Anzahl", index=False)
-    dataframe2 = DataFrame({"Anzahl Strahlen": Zähler_Liste})
+    #dataframe1 = DataFrame({"Anzahl Strahlen": Zähler_Liste})
+    #dataframe1.to_excel("Resultate_zaehler.xlsx", sheet_name="Anzahl", index=False)
+    dataframe2 = DataFrame({"alle Winkel": alle_Winkel_Liste,
+                            "sichere Winkel": sichere_Winkel_Liste,
+                            "mögliche Winkel": mögliche_Winkel_Liste
+                            })
     dataframe2.to_excel("Resultate_winkel.xlsx", sheet_name="Winkel", index=False)
     print("fertig")
 
