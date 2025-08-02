@@ -21,7 +21,7 @@ import os
 from pandas import DataFrame
 
 # hier den jeweiligen Bildpfad einfügen oder ansonsten config file
-folder_path = r"C:\schulisches\Matura\Daten\Data Modus 2-2"
+folder_path = r"C:\schulisches\Matura\Daten\Data Modus 2-Winkel"
 
 def debug_enabled():
     try:
@@ -41,7 +41,7 @@ def debug_enabled():
 def bilder_einfügen():
     try:
         bilder = []
-        for i in glob.glob(os.path.join(folder_path, "DSC_0512.JPG")):
+        for i in glob.glob(os.path.join(folder_path, "DSC_*.JPG")):
             bilder.append(i)
         print(bilder)
         print(f"Es wurden {len(bilder)} Bilder gefunden!")
@@ -315,4 +315,4 @@ def final():
     print("fertig")
 
 
-#final()
+final()
