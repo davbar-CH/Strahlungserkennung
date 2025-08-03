@@ -4,6 +4,7 @@ from types import NoneType
 
 import cv2
 from shapely import Point, MultiLineString
+from skimage.color.rgb_colors import black
 from skimage.feature import canny
 import numpy as np
 import glob
@@ -11,7 +12,7 @@ import os
 import matplotlib.pyplot as plt
 from skimage.transform import probabilistic_hough_line
 from itertools import chain
-from shapely.geometry import LineString
+from shapely.geometry import LineString, box
 from shapely.ops import unary_union
 from pandas import DataFrame
 
@@ -191,21 +192,61 @@ while i < len(bilder):
         else:
             linien_iterierbar = []
 
+        anzahl_zonen = 4
+        temp1, temp2, punkte = croppen()
+        verschiebung_rechts = (punkte[1] - punkte[2]) / anzahl_zonen
+        verschiebung_links =  (punkte[0] - punkte[3]) / anzahl_zonen
+        zonen = [
+            box(punkte[3][0], punkte[3][1], punkte[2][0] + verschiebung_rechts[0], punkte[2][1]  + verschiebung_rechts[1]),
+            box(punkte[2][0] + verschiebung_rechts[0], punkte[2][1]  + verschiebung_rechts[1], punkte[3][0] + 2 * verschiebung_links[0] , punkte[3][1] + 2 * verschiebung_links[1]),
+            box(punkte[3][0] + 2 * verschiebung_links[0], punkte[3][1] + 2 * verschiebung_links[1], punkte[2][0] + 3 * verschiebung_rechts[0], punkte[2][1]  + 3 * verschiebung_rechts[1]),
+            box(punkte[2][0] + 3 * verschiebung_rechts[0], punkte[2][1]  + 3 * verschiebung_rechts[1], punkte[3][0] + 4 * verschiebung_links[0], punkte[3][1] + 4 * verschiebung_links[1])
+        ]
+
         boundary_punkte = []
+        zugewiesene_zonen = []
         for linie in linien_iterierbar:
+            max_überlappung = 0
+            bestes_rechteck_index = None
+
+            for i, rect in enumerate(zonen):
+                überlappung = linie.intersection(rect)
+                if not überlappung.is_empty:
+                    length = überlappung.length
+                    if length > max_überlappung:
+                        max_überlappung = length
+                        bestes_rechteck_index = i
+
+            zugewiesene_zonen.append(bestes_rechteck_index)
             boundary_punkte.append(list(linie.coords))
+
             x, y = linie.xy
             if ax is not None:
                 ax[2].plot(x, y, color="red")
 
-        for punkt in boundary_punkte:
+        for punkt, zonen_index in zip(boundary_punkte, zugewiesene_zonen):
             nördlichster_punkt = min(punkt, key=lambda p: p[1])
             südlichster_punkt = max(punkt, key=lambda p: p[1])
             snördlichster_punkt = Point(nördlichster_punkt)
             ssüdlichster_punkt = Point(südlichster_punkt)
             längen = snördlichster_punkt.distance(ssüdlichster_punkt)
-            print(längen)
-            längen_liste.append(längen)
+
+            if zonen_index == 0:
+
+                print(längen)
+                längen_liste.append(längen)
+            if zonen_index == 1:
+
+                print(längen)
+                längen_liste.append(längen)
+            if zonen_index == 2:
+
+                print(längen)
+                längen_liste.append(längen)
+            if zonen_index == 3:
+
+                print(längen)
+                längen_liste.append(längen)
 
         return längen_liste
 
