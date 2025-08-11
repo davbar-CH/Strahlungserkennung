@@ -141,7 +141,7 @@ while i < len(bilder):
         return punkte
 
 
-    def punkt_auf_gerade(punkte_plot, Startpunkte, Endpunkte, ax):
+    def punkt_auf_gerade(punkte_plot, Startpunkte, Endpunkte, ax, toleranz=20):
         geraden_liste = []
         längen_liste = []
 
@@ -161,6 +161,8 @@ while i < len(bilder):
         if ax is not None:
             ax[2].plot((punkte_plot[3][0], punkte_plot[0][0]), (punkte_plot[3][1], punkte_plot[0][1]), color="blue")
 
+        # falls ein Punkt sich zu nah an einer der berechneten Begrenzungslinien befindet,
+        # dann wird dieser herausgefiltert. Alle anderen Punkte werden übernommen
         fragment_linien = []
         for p0, p1 in zip(Startpunkte, Endpunkte):
             zu_nah = False
@@ -168,8 +170,7 @@ while i < len(bilder):
                 y_p0 = (m * p0[0]) + q
                 y_p1 = (m * p1[0]) + q
 
-                # print((y_p0, p0[1]), (y_p1, p1[1]))
-                if abs(p0[1] - y_p0) < 20 and abs(p1[1] - y_p1) < 20:
+                if abs(p0[1] - y_p0) < toleranz and abs(p1[1] - y_p1) < toleranz:
                     zu_nah = True
                     break
             if not zu_nah:
