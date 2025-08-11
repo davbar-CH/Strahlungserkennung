@@ -165,23 +165,19 @@ while i < len(bilder):
                 anzahl_schnitte = 0
                 linie1 = shapely.LineString([Anfangspunkte[i], Endpunkte[i]])
                 vektor1 = np.array(Endpunkte[i]) - np.array(Anfangspunkte[i])
-                print(Endpunkte[i], Anfangspunkte[i], "vektor1")
 
                 for j in range(i + 1, len(Anfangspunkte)):
                     linie2 = shapely.LineString([Anfangspunkte[j], Endpunkte[j]])
                     vektor2 = np.array(Endpunkte[j]) - np.array(Anfangspunkte[j])
-                    print(Endpunkte[j], Anfangspunkte[j], "vektoren")
                     pt1, pt2 = nearest_points(linie1, linie2)
 
                     if pt1.distance(pt2) <= 50:
                         schnittpunkt_liste.append(Point((pt1.x + pt2.x) / 2, (pt1.y + pt2.y) / 2))
-                        print(Point((pt1.x + pt2.x) / 2, (pt1.y + pt2.y) / 2), "der Schnittpunkt")
                         anzahl_schnitte = anzahl_schnitte + 1
                         schneidende_vektoren.append((vektor1, vektor2))
 
                 if anzahl_schnitte == 1:
                     for vektor1, vektor2 in schneidende_vektoren:
-                        print(vektor1, vektor2)
                         winkel_deg = winkel_berechnung(vektor1, vektor2)
                         sichere_winkel.append(winkel_deg)
                         alle_winkel.append(winkel_deg)
@@ -305,8 +301,8 @@ while len(sichere_Winkel_Liste) < len(alle_Winkel_Liste) or len(mögliche_Winkel
         mögliche_Winkel_Liste.append("0")
 
 def final():
-    #dataframe1 = DataFrame({"Anzahl Strahlen": Zähler_Liste})
-    #dataframe1.to_excel("Resultate_zaehler.xlsx", sheet_name="Anzahl", index=False)
+    dataframe1 = DataFrame({"Anzahl Strahlen": Zähler_Liste})
+    dataframe1.to_excel("Resultate_zaehler.xlsx", sheet_name="Anzahl", index=False)
     dataframe2 = DataFrame({"alle Winkel": alle_Winkel_Liste,
                             "sichere Winkel": sichere_Winkel_Liste,
                             "mögliche Winkel": mögliche_Winkel_Liste

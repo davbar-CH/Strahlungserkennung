@@ -39,7 +39,7 @@ def debug_enabled():
 def bilder_einfügen():
     try:
         bilder = []
-        for i in glob.glob(os.path.join(folder_path, "DSC_*.JPG")):
+        for i in glob.glob(os.path.join(folder_path, "DSC_5069.JPG")):
             bilder.append(i)
         print(bilder)
         print(f"Es wurden {len(bilder)} Bilder gefunden!")
@@ -112,30 +112,30 @@ while i < len(bilder):
         end_dic = {Endpunkte[i][0]: Endpunkte[i][1] for i in range(0, len(Endpunkte))}
 
         x_min = min(chain(start_dic.keys(), end_dic.keys()))  # westlichster Punkt
-        y_x_min = start_dic.get(x_min, end_dic.get(x_min))
+        y_von_x_min = start_dic.get(x_min, end_dic.get(x_min))
 
         x_max = max(chain(start_dic.keys(), end_dic.keys()))  # östlichster Punkt
-        y_x_max = start_dic.get(x_max, end_dic.get(x_max))
+        y_von_x_max = start_dic.get(x_max, end_dic.get(x_max))
 
         y_min = min(chain(start_dic.values(), end_dic.values()))  # nördlichster Punkt
-        x_y_min = None
+        x_von_y_min = None
         for key in chain(start_dic, end_dic):
             if start_dic.get(key) == y_min or end_dic.get(key) == y_min:
-                x_y_min = key
+                x_von_y_min = key
                 break
 
         y_max = max(chain(start_dic.values(), end_dic.values()))  # südlichster Punkt
-        x_y_max = None
+        x_von_y_max = None
         for key in chain(start_dic, end_dic):
             if start_dic.get(key) == y_max or end_dic.get(key) == y_max:
-                x_y_max = key
+                x_von_y_max = key
                 break
 
         punkte = np.array([
-            [x_y_min, y_min],
-            [x_max, y_x_max],
-            [x_y_max, y_max],
-            [x_min, y_x_min]
+            [x_von_y_min, y_min],
+            [x_max, y_von_x_max],
+            [x_von_y_max, y_max],
+            [x_min, y_von_x_min]
         ], dtype=np.int32)
 
         return punkte
@@ -145,6 +145,8 @@ while i < len(bilder):
         geraden_liste = []
         längen_liste = []
 
+        # erstellt Geraden zur Filterung des Randes
+        # verbindet jeweils die Punkte im Uhrzeigersinn, vom nördlisten Punkt aus
         for punkt1, punkt2 in zip(punkte_plot, punkte_plot[1:]):
             m = (punkt1[1] - punkt2[1]) / (punkt1[0] - punkt2[0])
             q = punkt1[1] - (m * punkt1[0])
@@ -152,6 +154,7 @@ while i < len(bilder):
             if ax is not None:
                 ax[2].plot((punkt1[0], punkt2[0]), (punkt1[1], punkt2[1]), color="blue")
 
+        # verbindet den westlichsten Punkt mit dem Nördlisten
         m1 = (punkte_plot[3][1] - punkte_plot[0][1]) / (punkte_plot[3][0] - punkte_plot[0][0])
         q1 = punkte_plot[3][1] - (m1 * punkte_plot[3][0])
         geraden_liste.append((m1, q1))
@@ -211,11 +214,11 @@ while i < len(bilder):
 
 
     def hauptprogramm():
-        # Line finding using the Probabilistic Hough Transform
+        # Strahlungserkennung mit PPHT
         cropped, grau, punkte = croppen()
 
         edges = canny(grau, 4, 25, 40)
-        lines = probabilistic_hough_line(edges, threshold=5, line_length=30, line_gap=10)
+        lines = probabilistic_hough_line(edges, threshold=5, line_length=20, line_gap=10)
 
         Startpunkte = []
         Endpunkte = []
@@ -261,5 +264,5 @@ while i < len(bilder):
         print("Gerade im Debugmodus")
         i = i + 1
 
-dataframe1 = DataFrame({"Längen": längen_liste_gesamt})
-dataframe1.to_excel("Resultate_laengen.xlsx", sheet_name="Laengen", index=False)
+#dataframe1 = DataFrame({"Längen": längen_liste_gesamt})
+#dataframe1.to_excel("Resultate_laengen.xlsx", sheet_name="Laengen", index=False)
