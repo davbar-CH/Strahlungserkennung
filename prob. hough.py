@@ -1,7 +1,4 @@
 import sys
-from logging import exception
-from types import NoneType
-
 import cv2
 from shapely import Point, MultiLineString
 from skimage.feature import canny
@@ -19,7 +16,7 @@ from pandas import DataFrame
 folder_path = r"C:\schulisches\Matura\Daten\matura data\length3"
 
 
-# diese funktioniert für mich, in pycharm. Je nach IDE muss diese Funktion geändert werden
+# diese funktioniert für mich, in PyCharm. Je nach IDE muss diese Funktion geändert werden
 def debug_enabled():
     try:
         if sys.gettrace() is not None:
@@ -36,7 +33,7 @@ def debug_enabled():
     return False
 
 
-def bilder_einfügen():
+def bilder_einfuegen():
     try:
         bilder = []
         for i in glob.glob(os.path.join(folder_path, "DSC_5069.JPG")):
@@ -49,9 +46,9 @@ def bilder_einfügen():
         print(f"Fehler beim Einfügen des Bildes aus der Datei:{e}")
 
 
-bilder = bilder_einfügen()
+bilder = bilder_einfuegen()
 i = 0
-längen_liste_gesamt = []
+laengen_liste_gesamt = []
 while i < len(bilder):
     def bilder_einlesen():
         try:
@@ -101,15 +98,15 @@ while i < len(bilder):
 
             print("geht2")
 
-            return cropped, grau, punkte
+            return cropped, grau, punkte_skal
 
         except Exception as e:
             print(f"Fehler beim Croppen:{e}")
 
 
-    def plot_ecken(Startpunkte, Endpunkte):
-        start_dic = {Startpunkte[i][0]: Startpunkte[i][1] for i in range(0, len(Startpunkte))}
-        end_dic = {Endpunkte[i][0]: Endpunkte[i][1] for i in range(0, len(Endpunkte))}
+    def plot_ecken(startpunkte, endpunkte):
+        start_dic = {startpunkte[i][0]: startpunkte[i][1] for i in range(0, len(startpunkte))}
+        end_dic = {endpunkte[i][0]: endpunkte[i][1] for i in range(0, len(endpunkte))}
 
         x_min = min(chain(start_dic.keys(), end_dic.keys()))  # westlichster Punkt
         y_von_x_min = start_dic.get(x_min, end_dic.get(x_min))
@@ -141,13 +138,13 @@ while i < len(bilder):
         return punkte
 
 
-    def punkt_auf_gerade(punkte_plot, Startpunkte, Endpunkte, ax, toleranz=20):
+    def punkt_auf_gerade(plot_ecken, startpunkte, endpunkte, ax, toleranz=20):
         geraden_liste = []
-        längen_liste = []
+        laengen_liste = []
 
         # erstellt Geraden zur Filterung des Randes
         # verbindet jeweils die Punkte im Uhrzeigersinn, vom nördlisten Punkt aus
-        for punkt1, punkt2 in zip(punkte_plot, punkte_plot[1:]):
+        for punkt1, punkt2 in zip(plot_ecken, plot_ecken[1:]):
             m = (punkt1[1] - punkt2[1]) / (punkt1[0] - punkt2[0])
             q = punkt1[1] - (m * punkt1[0])
             geraden_liste.append((m, q))
@@ -155,16 +152,16 @@ while i < len(bilder):
                 ax[2].plot((punkt1[0], punkt2[0]), (punkt1[1], punkt2[1]), color="blue")
 
         # verbindet den westlichsten Punkt mit dem Nördlisten
-        m1 = (punkte_plot[3][1] - punkte_plot[0][1]) / (punkte_plot[3][0] - punkte_plot[0][0])
-        q1 = punkte_plot[3][1] - (m1 * punkte_plot[3][0])
+        m1 = (plot_ecken[3][1] - plot_ecken[0][1]) / (plot_ecken[3][0] - plot_ecken[0][0])
+        q1 = plot_ecken[3][1] - (m1 * plot_ecken[3][0])
         geraden_liste.append((m1, q1))
         if ax is not None:
-            ax[2].plot((punkte_plot[3][0], punkte_plot[0][0]), (punkte_plot[3][1], punkte_plot[0][1]), color="blue")
+            ax[2].plot((plot_ecken[3][0], plot_ecken[0][0]), (plot_ecken[3][1], plot_ecken[0][1]), color="blue")
 
         # falls ein Punkt sich zu nah an einer der berechneten Begrenzungslinien befindet,
         # dann wird dieser herausgefiltert. Alle anderen Punkte werden übernommen
         fragment_linien = []
-        for p0, p1 in zip(Startpunkte, Endpunkte):
+        for p0, p1 in zip(startpunkte, endpunkte):
             zu_nah = False
             for m, q in geraden_liste:
                 y_p0 = (m * p0[0]) + q
@@ -178,15 +175,16 @@ while i < len(bilder):
                 fragment_linien.append(linie)
 
         if not fragment_linien:
-            längen_liste.append("0")
-            return längen_liste
+            laengen_liste.append("0")
+            return laengen_liste
         try:
             buffer_linien = [linie.buffer(0.5) for linie in fragment_linien]
             zusammen_polygone = unary_union(buffer_linien)
             zusammen_linien = zusammen_polygone.boundary
+
         except Exception:
-            längen_liste.append("0")
-            return längen_liste
+            laengen_liste.append("0")
+            return laengen_liste
 
         if isinstance(zusammen_linien, MultiLineString):
             linien_iterierbar = zusammen_linien.geoms
@@ -203,20 +201,20 @@ while i < len(bilder):
                 ax[2].plot(x, y, color="red")
 
         for punkt in boundary_punkte:
-            nördlichster_punkt = min(punkt, key=lambda p: p[1])
-            südlichster_punkt = max(punkt, key=lambda p: p[1])
-            snördlichster_punkt = Point(nördlichster_punkt)
-            ssüdlichster_punkt = Point(südlichster_punkt)
-            längen = snördlichster_punkt.distance(ssüdlichster_punkt)
-            print(längen)
-            längen_liste.append(längen)
+            noerdlichster_punkt = min(punkt, key=lambda p: p[1])
+            suedlichster_punkt = max(punkt, key=lambda p: p[1])
+            snoerdlichster_punkt = Point(noerdlichster_punkt)
+            ssuedlichster_punkt = Point(suedlichster_punkt)
+            laengen = snoerdlichster_punkt.distance(ssuedlichster_punkt)
+            print(laengen)
+            laengen_liste.append(laengen)
 
-        return längen_liste
+        return laengen_liste
 
 
     def hauptprogramm():
         # Strahlungserkennung mit PPHT
-        cropped, grau, punkte = croppen()
+        cropped, grau, punkte_skal = croppen()
 
         edges = canny(grau, 4, 25, 40)
         lines = probabilistic_hough_line(edges, threshold=5, line_length=20, line_gap=10)
@@ -228,7 +226,7 @@ while i < len(bilder):
             Startpunkte.append(p0)
             Endpunkte.append(p1)
 
-        if debug_enabled() is True:
+        if debug_enabled():
             fig, axes = plt.subplots(1, 3, figsize=(15, 10), sharex=True, sharey=True)
 
             punkte_plot = plot_ecken(Startpunkte, Endpunkte)
@@ -251,19 +249,20 @@ while i < len(bilder):
 
             plt.tight_layout()
             plt.show()
+            return None
         else:
             punkte_plot = plot_ecken(Startpunkte, Endpunkte)
-            längen_liste = punkt_auf_gerade(punkte_plot, Startpunkte, Endpunkte, ax=None)
+            laengen_liste = punkt_auf_gerade(punkte_plot, Startpunkte, Endpunkte, ax=None)
 
-            return längen_liste
+            return laengen_liste
 
     try:
-        längen_liste = hauptprogramm()
-        längen_liste_gesamt.extend(längen_liste)
+        laengen_liste = hauptprogramm()
+        laengen_liste_gesamt.extend(laengen_liste)
         i = i + 1
     except TypeError:
         print("Gerade im Debugmodus")
         i = i + 1
 
-#dataframe1 = DataFrame({"Längen": längen_liste_gesamt})
-#dataframe1.to_excel("Resultate_laengen.xlsx", sheet_name="Laengen", index=False)
+dataframe1 = DataFrame({"Längen": laengen_liste_gesamt})
+dataframe1.to_excel("Resultate_laengen.xlsx", sheet_name="Laengen", index=False)
