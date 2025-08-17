@@ -68,6 +68,7 @@ x, y, w, h = cv2.boundingRect(punkte)
 # Nur den Bereich innerhalb der Bounding Box ausschneiden
 cropped = masked[y:y + h, x:x + w]
 
+
 tested_angles = np.linspace(-np.pi / 2, np.pi / 2, 360, endpoint=False)
 h, theta, d = hough_line(cropped, theta=tested_angles)
 
@@ -91,6 +92,7 @@ ax[1].set_title('Hough transform')
 ax[1].set_xlabel('Angles (degrees)')
 ax[1].set_ylabel('Distance (pixels)')
 ax[1].axis('image')"""
+
 
 strcord = []
 
@@ -150,4 +152,5 @@ for i in strcord:
 
 plt.tight_layout()
 plt.show()
+
 
