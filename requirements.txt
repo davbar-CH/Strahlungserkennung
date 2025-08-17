@@ -14,3 +14,8 @@ python-dotenv>=1.0.0
 # Standard library modules (included with Python)
 # glob - built-in
 # os - built-in
+
+scipy~=1.16.1
+scikit-learn~=1.7.1
+pandas~=2.3.1
+shapely~=2.1.1
