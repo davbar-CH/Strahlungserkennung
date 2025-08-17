@@ -21,7 +21,7 @@ import os
 from pandas import DataFrame
 
 # hier den jeweiligen Bildpfad einfügen oder ansonsten config file
-folder_path = r"C:\schulisches\Matura\Daten\Data Modus 2-Winkel"
+folder_path = r"C:\schulisches\Matura\Daten\matura data\anzahl"
 
 def debug_enabled():
     try:
@@ -301,14 +301,13 @@ while len(sichere_Winkel_Liste) < len(alle_Winkel_Liste) or len(mögliche_Winkel
         mögliche_Winkel_Liste.append("0")
 
 def final():
-    dataframe1 = DataFrame({"Anzahl Strahlen": Zähler_Liste})
-    dataframe1.to_excel("Resultate_zaehler.xlsx", sheet_name="Anzahl", index=False)
+    dataframe1 = DataFrame({"Anzahl Strahlen 2": Zähler_Liste})
+    dataframe1.to_excel("Resultate_zaehler2.xlsx", sheet_name="Anzahl", index=False)
     dataframe2 = DataFrame({"alle Winkel": alle_Winkel_Liste,
                             "sichere Winkel": sichere_Winkel_Liste,
                             "mögliche Winkel": mögliche_Winkel_Liste
                             })
     dataframe2.to_excel("Resultate_winkel.xlsx", sheet_name="Winkel", index=False)
     print("fertig")
-
 
 final()

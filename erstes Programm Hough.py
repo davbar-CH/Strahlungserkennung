@@ -36,7 +36,7 @@ def debug_enabled():
 def bilder_einfuegen():
     try:
         bilder = []
-        for i in glob.glob(os.path.join(folder_path, "DSC_5069.JPG")):
+        for i in glob.glob(os.path.join(folder_path, "DSC_*.JPG")):
             bilder.append(i)
         print(bilder)
         print(f"Es wurden {len(bilder)} Bilder gefunden!")
@@ -75,11 +75,18 @@ while i < len(bilder):
             # Punkte für Ecken des Bildes, bilden Viereck, damit der Rand der Nebelkammer weg ist.
             # Punkte müssen ebenfalls skaliert werden
             punkte = np.array([
+                [970, 1550],  # oben links
+                [3000, 440],  # oben rechts
+                [4400, 2187],  # unten rechts
+                [2400, 3760]  # unten links
+            ], dtype=np.int32)
+
+            """punkte = np.array([
                 [1313, 63],  # oben links
                 [2148, 646],  # oben rechts
                 [1414, 1472],  # unten rechts
                 [552, 738]  # unten links
-            ], dtype=np.int32)
+            ], dtype=np.int32)"""
 
             punkte_skal = (punkte * skalierung).astype(np.int32)
 
