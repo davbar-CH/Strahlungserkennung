@@ -49,6 +49,7 @@ def bilder_einfuegen():
 bilder = bilder_einfuegen()
 i = 0
 laengen_liste_gesamt = []
+
 while i < len(bilder):
     def bilder_einlesen():
         try:
@@ -81,15 +82,8 @@ while i < len(bilder):
                 [2400, 3760]  # unten links
             ], dtype=np.int32)
 
-            """punkte = np.array([
-                [1313, 63],  # oben links
-                [2148, 646],  # oben rechts
-                [1414, 1472],  # unten rechts
-                [552, 738]  # unten links
-            ], dtype=np.int32)"""
-
             punkte_skal = (punkte * skalierung).astype(np.int32)
-
+            
             punkte_reshape = punkte_skal.reshape((-1, 1, 2))
 
             # Maske erzeugen, damit die Punkte das Viereck bilden,
@@ -100,11 +94,10 @@ while i < len(bilder):
             x, y, w, h = cv2.boundingRect(punkte_reshape)
             cropped = masked[y:y + h, x:x + w]
 
-            # --- get image data as numpy array (if color tiff may be a 4D RGBA array)
             grau = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
 
             print("geht2")
-
+            
             return cropped, grau, punkte_skal
 
         except Exception as e:
