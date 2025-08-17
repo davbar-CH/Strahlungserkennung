@@ -1,3 +1,5 @@
+# Einzelene Elemente für PPHT stammt von hier:
+# https://scikit-image.org/docs/stable/auto_examples/edges/plot_line_hough_transform.html 
 import sys
 import cv2
 from shapely import Point, MultiLineString
@@ -14,7 +16,6 @@ from pandas import DataFrame
 
 # hier den jeweiligen Bildpfad einfügen oder ansonsten config file
 folder_path = r"C:\schulisches\Matura\Daten\matura data\length3"
-
 
 # diese funktioniert für mich, in PyCharm. Je nach IDE muss diese Funktion geändert werden
 def debug_enabled():
@@ -44,7 +45,6 @@ def bilder_einfuegen():
 
     except Exception as e:
         print(f"Fehler beim Einfügen des Bildes aus der Datei:{e}")
-
 
 bilder = bilder_einfuegen()
 i = 0
