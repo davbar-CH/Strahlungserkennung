@@ -1,3 +1,6 @@
+"""
+https://scikit-image.org/docs/stable/auto_examples/edges/plot_line_hough_transform.html
+"""
 import glob
 import os
 import cv2
@@ -12,7 +15,6 @@ class StrahlPunkt:
     def __init__(self, xKoordinate, yKoordinate):
         self.xKoordinate = xKoordinate
         self.yKoordinate = yKoordinate
-
 
 # Bilderliste und Pfad zum Ordner
 bilder = []
@@ -42,8 +44,6 @@ rotiert = imutils.rotate(image, 51)
         for j in zip(range(strcor_x), range(strcor_y)):
             if strcor_x[j] + 1 and strcor_y[j] + 1 = strcor_x[j+1] and strcor_y[j+1]:"""
 
-# [26 26 26] Wert für Pixel 1599 und 2399
-
 # Punkte für die Ecken des Bildes, bilden Viereck, damit der Rand der Nebelkammer weg ist
 punkte = np.array([
     [715, 1450],    # oberer linke Eckpunkt
@@ -54,7 +54,7 @@ punkte = np.array([
 
 punkte = punkte.reshape((-1, 1, 2))
 
-# Weisse Maske erzeugen, damit die Punkte das Viereck bilden,
+# Maske erzeugen, damit die Punkte das Viereck bilden,
 # damit man das eigentliche Bild vom Hintergrund wegschneiden kann
 maske = np.zeros(image.shape[:2], dtype=np.uint8)
 cv2.fillPoly(maske, [punkte], 255)
@@ -68,12 +68,9 @@ x, y, w, h = cv2.boundingRect(punkte)
 # Nur den Bereich innerhalb der Bounding Box ausschneiden
 cropped = masked[y:y + h, x:x + w]
 
-# Classic straight-line Hough transform
-# Set a precision of 0.5 degree.
 tested_angles = np.linspace(-np.pi / 2, np.pi / 2, 360, endpoint=False)
 h, theta, d = hough_line(cropped, theta=tested_angles)
 
-# Generating figure 1
 fig, axes = plt.subplots(1, 2, figsize=(15, 6))
 ax = axes.ravel()
 
@@ -153,3 +150,4 @@ for i in strcord:
 
 plt.tight_layout()
 plt.show()
+
