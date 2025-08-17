@@ -1,10 +1,10 @@
 # ! /usr/bin/env python
 """
-automated thresholding using otsu:
-https://scipy-lectures.org/packages/scikit-image/auto_examples/plot_threshold.html
-structure element for connectivity:
+PCA:
+https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
+connectivity filter:
 https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.generate_binary_structure.html
-connected component filter:
+label:
 https://docs.scipy.org/doc/scipy-1.2.3/reference/generated/scipy.ndimage.label.html
 """
 import sys
@@ -23,6 +23,8 @@ from pandas import DataFrame
 # hier den jeweiligen Bildpfad einfügen oder ansonsten config file
 folder_path = r"C:\schulisches\Matura\Daten\matura data\anzahl"
 
+# diese Funktion geht für mich, auf PyCharm
+# es kann sein, dass es auf anderen IDEs nicht funktioniert
 def debug_enabled():
     try:
         if sys.gettrace() is not None:
@@ -38,6 +40,8 @@ def debug_enabled():
 
     return False
 
+# nimmt Bilder aus dem Dateipfad und setzt sie zusammen
+# gibt alles Dateipfade zurück
 def bilder_einfügen():
     try:
         bilder = []
@@ -59,6 +63,7 @@ mögliche_Winkel_Liste = []
 alle_Winkel_Liste = []
 
 while i < len(bilder):
+    # die Bilder werden mit cv2 eingelesen und das eingelesen Bild wird zurückgegeben
     def bilder_einlesen():
         try:
             image = bilder[i]
@@ -70,7 +75,8 @@ while i < len(bilder):
         except Exception as e:
             print(f"Fehler beim Einlesen des Bildes:{e}")
 
-    # noinspection PyTypeChecker
+    # schneidet das Bild anhand von vier Punkten zu und skaliert es (um 0.5)
+    # gibt das zugeschnittene Bild zurück und die Bilddaten
     def croppen():
         try:
             image = bilder_einlesen()
@@ -84,13 +90,15 @@ while i < len(bilder):
             # Punkte für Ecken des Bildes, bilden Viereck, damit der Rand der Nebelkammer weg ist.
             # Punkte müssen ebenfalls skaliert werden
             punkte = np.array([
-                [970, 1550],  # oben links
-                [3000, 440],  # oben rechts
-                [4400, 2187],  # unten rechts
-                [2400, 3760]  # unten links
+                [970, 1550],  # obere linke Ecke
+                [3000, 440],  # obere rechte Ecke
+                [4400, 2187],  # untere rechte Ecke
+                [2400, 3760]  # untere linke Ecke
             ], dtype=np.int32)
 
             punkte = (punkte * skalierung).astype(np.int32)
+
+            # cv2 verlangt die Punkte in einem anderen Listen-format
             punkte = punkte.reshape((-1, 1, 2))
 
             # Maske erzeugen, damit die Punkte das Viereck bilden,
@@ -107,7 +115,7 @@ while i < len(bilder):
             # Nur den Bereich innerhalb des Vierecks ausschneiden
             cropped = masked[y:y + h, x:x + w]
 
-            # --- get image data as numpy array (if color tiff may be a 4D RGBA array)
+            # das Bilddaten extrahieren, für spätere Berechnungen
             imageArray = np.array(cropped)
             print("geht2")
             return cropped, imageArray
@@ -117,17 +125,25 @@ while i < len(bilder):
 
 
     def labeling():
+        # diese Programm-Stück habe ich von Dominik Meier, vielen herzlichen Dank!
+        # gibt das gelabelte Bild, das Graustufenbild und das Bild nach der threshold zurück
         try:
             temp, imageArray = croppen()
-            # --- collapse array (sum all color channels to make grayscale)
+            
+            # das Bild als Graustufenbild
             aGrayScaleArray = np.sum(imageArray, axis=2).astype(np.int64)
+            
             # treshhold empirisch gefunden, alternativ otsu-methode, dauert aber
-            threshold = 220  # 120 für Strahlungserkennung und 300 für Winkel
-            # ---- threshold array
+            threshold = 220  
+            
+            # das Bild nach der threshold
             aBinaryArray = aGrayScaleArray > threshold
-            # ---- run connectivity filter using 2D-cross structure element
+            
+            # connectivity filter
             aStructure = ndimage.generate_binary_structure(2,
                                                            2)  # hier 2,2 weil 2,1 würde Diagonale nicht erkennen
+
+            # das gelabelte Bild
             aVal = ndimage.label(aBinaryArray, aStructure, output=None)
 
             print("geht3")
@@ -138,8 +154,14 @@ while i < len(bilder):
 
 
     # für Winkel ein "ruhigeres" Bild nehmen
+    
+    # berechnet den Winkel zwischen zwei Strahlen
+    # Winkel werden in sichere, mögliche und alle Winkel unterteilt
+    # falls zwei Punkte auf zwei Strahlen näher als 50 Pixel zueinander sind, wird der Strahl als schneidend angesehen
     def winkel_funk(Anfangspunkte, Endpunkte):
         try:
+            # berechnet den Winkel zwischen zwei Vektoren mit dem Skalarprodukt
+            # gibt den Winkel in Grad zurück
             def winkel_berechnung(vektor1, vektor2):
                 try:
                     betrag_vektor1 = np.linalg.norm(vektor1)
@@ -160,6 +182,7 @@ while i < len(bilder):
             sichere_winkel = []
             mögliche_winkel = []
 
+            # äussere Schleife iteriert durch alle gefundenen (Anfangs-)Punkte und erstellt den "start-vektor"
             for i in range(len(Anfangspunkte)):
                 schneidende_vektoren = []
                 anzahl_schnitte = 0
@@ -169,6 +192,7 @@ while i < len(bilder):
                 for j in range(i + 1, len(Anfangspunkte)):
                     linie2 = shapely.LineString([Anfangspunkte[j], Endpunkte[j]])
                     vektor2 = np.array(Endpunkte[j]) - np.array(Anfangspunkte[j])
+                    
                     pt1, pt2 = nearest_points(linie1, linie2)
 
                     if pt1.distance(pt2) <= 50:
@@ -176,6 +200,7 @@ while i < len(bilder):
                         anzahl_schnitte = anzahl_schnitte + 1
                         schneidende_vektoren.append((vektor1, vektor2))
 
+                # falls der Strahl einmal geschnitten wird, wird er als "sicher" angesehen
                 if anzahl_schnitte == 1:
                     for vektor1, vektor2 in schneidende_vektoren:
                         winkel_deg = winkel_berechnung(vektor1, vektor2)
@@ -183,6 +208,8 @@ while i < len(bilder):
                         alle_winkel.append(winkel_deg)
                         print(f"Winkel zwischen zwei Strahlen:{winkel_deg}")
 
+                # falls der Strhl mehrmals geschnitten wird, wird zusätzlich geprüft, ob er grösser als 10° ist
+                # das soll dazu dienen, um fehlerhafte, "abzweigende" Strahlen zu vermeiden
                 if anzahl_schnitte > 1:
                     for vektor1, vektor2 in schneidende_vektoren:
                         winkel_deg = winkel_berechnung(vektor1, vektor2)
@@ -193,6 +220,7 @@ while i < len(bilder):
                         else:
                             print("Wahrscheinlich ein falscher Winkel")
 
+                # und falls er keinmal geschnitten wird, dann ist es die natürliche Hintergrundstrahlung
                 if anzahl_schnitte < 1:
                     print("Wahrscheinlich ein einzelner Strahl")
             return sichere_winkel, mögliche_winkel, alle_winkel, schnittpunkt_liste
@@ -207,8 +235,8 @@ while i < len(bilder):
             cropped, temp = croppen()
             Anfangspunkte = []
             Endpunkte = []
-            # ---- get object dimensions
-            # aVal[0] is a labeled image where each object has a separate label (incl. background)
+
+            # jedes Objekt im Bild wird gelabelt
             objectLabels = np.unique(aVal[0])
             print("geht4")
             zähler = 0
@@ -300,6 +328,7 @@ while len(sichere_Winkel_Liste) < len(alle_Winkel_Liste) or len(mögliche_Winkel
     if len(mögliche_Winkel_Liste) < len(alle_Winkel_Liste):
         mögliche_Winkel_Liste.append("0")
 
+# exportiert die Ergebnisse als Excel-Datei
 def final():
     dataframe1 = DataFrame({"Anzahl Strahlen 2": Zähler_Liste})
     dataframe1.to_excel("Resultate_zaehler2.xlsx", sheet_name="Anzahl", index=False)
