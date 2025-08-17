@@ -32,7 +32,7 @@ def debug_enabled():
 
     return False
 
-
+# nimmt Bilder aus dem Dateipfad und setzt sie zusammen, gibt alles Dateipfade zurück
 def bilder_einfuegen():
     try:
         bilder = []
@@ -51,7 +51,7 @@ i = 0
 laengen_liste_gesamt = []
 
 while i < len(bilder):
-    def bilder_einlesen():
+    def bilder_einlesen():    # die Bilder werden mit cv2 eingelesen und das eingelesen Bild wird zurückgegeben
         try:
             image = bilder[i]
             image = cv2.imread(image)
@@ -76,14 +76,14 @@ while i < len(bilder):
             # Punkte für Ecken des Bildes, bilden Viereck, damit der Rand der Nebelkammer weg ist.
             # Punkte müssen ebenfalls skaliert werden
             punkte = np.array([
-                [970, 1550],  # oben links
-                [3000, 440],  # oben rechts
-                [4400, 2187],  # unten rechts
-                [2400, 3760]  # unten links
+                [970, 1550],  # obere linke Ecke
+                [3000, 440],  # obere rechte Ecke
+                [4400, 2187],  # untere rechte Ecke
+                [2400, 3760]  # untere linke Ecke
             ], dtype=np.int32)
 
             punkte_skal = (punkte * skalierung).astype(np.int32)
-            
+            # cv2 verlangt die Punkte in einem anderen Listen-format
             punkte_reshape = punkte_skal.reshape((-1, 1, 2))
 
             # Maske erzeugen, damit die Punkte das Viereck bilden,
@@ -93,7 +93,7 @@ while i < len(bilder):
             masked = cv2.bitwise_and(image, image, mask=maske)
             x, y, w, h = cv2.boundingRect(punkte_reshape)
             cropped = masked[y:y + h, x:x + w]
-
+            # das Bild als Graustufenbild
             grau = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
 
             print("geht2")
@@ -178,9 +178,9 @@ while i < len(bilder):
             laengen_liste.append("0")
             return laengen_liste
         try:
-            buffer_linien = [linie.buffer(0.5) for linie in fragment_linien]
-            zusammen_polygone = unary_union(buffer_linien)
-            zusammen_linien = zusammen_polygone.boundary
+            buffer_linien = [linie.buffer(0.5) for linie in fragment_linien]    # ein Puffer von 0.5 wird um die Linie gelegt
+            zusammen_polygone = unary_union(buffer_linien)    # verbindet die gepufferten Linien
+            zusammen_linien = zusammen_polygone.boundary    # extrahier die Kontur der Linie
 
         except Exception:
             laengen_liste.append("0")
